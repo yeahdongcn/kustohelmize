@@ -22,3 +22,6 @@ mychart/
 
 # vscode extensions
 .vscode
+
+# ./bin/kustohelmize create xyz
+xyz
