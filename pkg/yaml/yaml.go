@@ -8,27 +8,32 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/sirupsen/logrus"
 	"gopkg.in/yaml.v1"
 )
 
 type YAMLProcessor struct {
-	out  io.Writer
-	data map[string]interface{}
+	logger *logrus.Logger
+	out    io.Writer
+	data   map[string]interface{}
 }
 
-func NewYAMLProcessor(out io.Writer, filename string) (*YAMLProcessor, error) {
+func NewYAMLProcessor(logger *logrus.Logger, out io.Writer, filename string) (*YAMLProcessor, error) {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
+		logger.Errorf("failed to read file %s: %v", filename, err)
 		return nil, err
 	}
 	data := make(map[string]interface{})
 	err = yaml.Unmarshal(b, &data)
 	if err != nil {
+		logger.Errorf("failed to unmarshal file %s: %v", filename, err)
 		return nil, err
 	}
 	return &YAMLProcessor{
-		out:  out,
-		data: data,
+		logger: logger,
+		out:    out,
+		data:   data,
 	}, nil
 }
 
@@ -43,18 +48,18 @@ func (p *YAMLProcessor) walk(v reflect.Value, level int, parent string) {
 	}
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
-		// fmt.Fprintln(p.out, parent)
+		p.logger.Debugf("Array/Slice: %s", parent)
 		fmt.Fprintln(p.out)
 		for i := 0; i < v.Len(); i++ {
 			p.walk(v.Index(i), level+1, parent)
 		}
 	case reflect.Map:
-		// fmt.Fprintln(p.out, parent)
+		p.logger.Debugf("Map: %s", parent)
 		fmt.Fprintln(p.out)
 		for _, k := range v.MapKeys() {
-			ident := ""
+			indents := ""
 			for i := 0; i < level; i++ {
-				ident += "  "
+				indents += DefaultIndent
 			}
 
 			xx := k.String()
@@ -63,7 +68,7 @@ func (p *YAMLProcessor) walk(v reflect.Value, level int, parent string) {
 			}
 
 			if xx == "selector" {
-				fmt.Fprintf(p.out, "%s%s: ", ident, k)
+				fmt.Fprintf(p.out, "%s%s: ", indents, k)
 				fmt.Fprintln(p.out, "{{- include \"mychart.selectorLabels\" . | nindent 4 }}")
 			} else if xx == "ports" {
 				x := `{{- with .Values.ports }}
@@ -73,16 +78,16 @@ ports:
 
 				scanner := bufio.NewScanner(strings.NewReader(x))
 				for scanner.Scan() {
-					fmt.Fprintf(p.out, "%s%s\n", ident, scanner.Text())
+					fmt.Fprintf(p.out, "%s%s\n", indents, scanner.Text())
 				}
 			} else {
-				fmt.Fprintf(p.out, "%s%s: ", ident, k)
+				fmt.Fprintf(p.out, "%s%s: ", indents, k)
 				p.walk(v.MapIndex(k), level+1, fmt.Sprintf("%s/%s", parent, k))
 			}
 
 		}
 	default:
-		// fmt.Fprintln(p.out, parent)
+		p.logger.Debugf("Default: %s", parent)
 		fmt.Fprintln(p.out, v)
 		// handle other types
 	}

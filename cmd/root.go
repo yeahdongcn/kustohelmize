@@ -3,10 +3,11 @@ package cmd
 import (
 	"io"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
-func NewRootCmd(out io.Writer, args []string) (*cobra.Command, error) {
+func NewRootCmd(logger *logrus.Logger, out io.Writer, args []string) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:          "helm",
 		Short:        "The Helm package manager for Kubernetes.",
@@ -16,7 +17,7 @@ func NewRootCmd(out io.Writer, args []string) (*cobra.Command, error) {
 
 	// Add subcommands
 	cmd.AddCommand(
-		newCreateCmd(out),
+		newCreateCmd(logger, out),
 	)
 
 	return cmd, nil

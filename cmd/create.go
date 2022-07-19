@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
 	"helm.sh/helm/v3/cmd/helm/require"
@@ -20,7 +21,7 @@ type createOptions struct {
 	starterDir string
 }
 
-func newCreateCmd(out io.Writer) *cobra.Command {
+func newCreateCmd(logger *logrus.Logger, out io.Writer) *cobra.Command {
 	o := &createOptions{}
 
 	cmd := &cobra.Command{
@@ -40,7 +41,7 @@ func newCreateCmd(out io.Writer) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o.name = args[0]
 			o.starterDir = helmpath.DataPath("starters")
-			return o.run(out)
+			return o.run(logger, out)
 		},
 	}
 
@@ -48,7 +49,7 @@ func newCreateCmd(out io.Writer) *cobra.Command {
 	return cmd
 }
 
-func (o *createOptions) run(out io.Writer) error {
+func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 	fmt.Fprintf(out, "Creating %s\n", o.name)
 	fmt.Fprintf(out, "Creating %s\n", filepath.Dir(o.name))
 
@@ -57,7 +58,7 @@ func (o *createOptions) run(out io.Writer) error {
 		fmt.Fprintf(out, "1 %s\n", err)
 		return err
 	}
-	p, err := yaml.NewYAMLProcessor(file, filepath.Join(".", "test", "testdata", "service.yaml"))
+	p, err := yaml.NewYAMLProcessor(logger, file, filepath.Join(".", "test", "testdata", "service.yaml"))
 	if err != nil {
 		fmt.Fprintf(out, "2 %s\n", err)
 		return err

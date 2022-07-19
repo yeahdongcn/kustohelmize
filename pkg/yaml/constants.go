@@ -1,0 +1,5 @@
+package yaml
+
+const (
+	DefaultIndent = "  "
+)
