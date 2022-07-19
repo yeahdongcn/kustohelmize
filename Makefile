@@ -14,4 +14,4 @@ help: ## Display this help.
 ##@ Build
 
 build:
-	$(GO) build -o bin/kustohelmize $(CURDIR)/cmd/kustohelmize/main.go
+	$(GO) build -o bin/kustohelmize $(CURDIR)/cmd/kustohelmize/*.go

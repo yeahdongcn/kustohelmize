@@ -16,3 +16,9 @@ vendor/
 
 # Binaries
 bin/kustohelmize
+
+# Sample helm chart
+mychart/
+
+# vscode extensions
+.vscode
