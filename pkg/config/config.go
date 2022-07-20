@@ -3,16 +3,20 @@ package config
 type FieldStrategy string
 
 const (
-	FieldStrategyString FieldStrategy = "string"
-	FieldStrategyIf     FieldStrategy = "if"
-	FieldStrategyXXX    FieldStrategy = "xxx"
+	FieldStrategyPlain   FieldStrategy = "plain-value"
+	FieldStrategyNewline FieldStrategy = "newline-value"
+	FieldStrategyIf      FieldStrategy = "expansion-if-present"
+	FieldStrategyXXX     FieldStrategy = "xxx"
 )
 
-type File struct {
-	XPaths map[string]FieldStrategy
+type XXX struct {
+	FieldStrategy FieldStrategy
+	Value         string
 }
 
+type XPaths map[string]XXX
+
 type Config struct {
-	Release string `yaml:"release"`
-	Files   []File `yaml:"files"`
+	ChartName string            `yaml:"chartName"`
+	Rules     map[string]XPaths `yaml:"rules"`
 }

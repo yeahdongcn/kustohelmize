@@ -8,6 +8,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
 	"helm.sh/helm/v3/cmd/helm/require"
 	"helm.sh/helm/v3/pkg/chart"
@@ -55,20 +56,43 @@ func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 
 	file, err := os.Create(filepath.Join(filepath.Dir(o.name), o.name))
 	if err != nil {
-		fmt.Fprintf(out, "1 %s\n", err)
+		logger.Errorf("Error creating file: %s", err)
 		return err
 	}
-	p, err := yaml.NewYAMLProcessor(logger, file, filepath.Join(".", "test", "testdata", "service.yaml"))
-	if err != nil {
-		fmt.Fprintf(out, "2 %s\n", err)
-		return err
-	}
-	p.Process()
-	return file.Close()
+	defer file.Close()
 
-	chartname := filepath.Base(o.name)
+	chartName := filepath.Base(o.name)
+	config := &config.Config{
+		ChartName: chartName,
+		Rules: map[string]config.XPaths{
+			filepath.Join(".", "test", "testdata", "service.yaml"): {
+				"/spec/type": {
+					FieldStrategy: config.FieldStrategyPlain,
+					Value:         "Values.xxx",
+				},
+				"/spec/selector": {
+					FieldStrategy: config.FieldStrategyNewline,
+					Value:         "Values.yyy",
+				},
+				"/spec/ports": {
+					FieldStrategy: config.FieldStrategyIf,
+					Value:         "Values.zzz",
+				},
+			},
+		},
+	}
+	fmt.Println(config)
+	p := yaml.NewYAMLProcessor(logger, file, config)
+	err = p.Process()
+	if err != nil {
+		logger.Errorf("Error processing YAML: %s", err)
+		return err
+	}
+	return nil
+
+	// TODO:
 	cfile := &chart.Metadata{
-		Name:        chartname,
+		Name:        chartName,
 		Description: "A Helm chart for Kubernetes",
 		Type:        "application",
 		Version:     "0.1.0",
@@ -87,6 +111,6 @@ func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 	}
 
 	chartutil.Stderr = out
-	_, err = chartutil.Create(chartname, filepath.Dir(o.name))
+	_, err = chartutil.Create(chartName, filepath.Dir(o.name))
 	return err
 }
