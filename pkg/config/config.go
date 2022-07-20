@@ -1,22 +1,39 @@
 package config
 
-type FieldStrategy string
+import "path/filepath"
+
+type XPathStrategy string
 
 const (
-	FieldStrategyPlain   FieldStrategy = "plain-value"
-	FieldStrategyNewline FieldStrategy = "newline-value"
-	FieldStrategyIf      FieldStrategy = "expansion-if-present"
-	FieldStrategyXXX     FieldStrategy = "xxx"
+	XPathStrategyInline       XPathStrategy = "inline"
+	XPathStrategyNewline      XPathStrategy = "newline"
+	XPathStrategyControlIf    XPathStrategy = "control-if"
+	XPathStrategyControlWith  XPathStrategy = "control-with"
+	XPathStrategyControlRange XPathStrategy = "control-range"
 )
 
-type XXX struct {
-	FieldStrategy FieldStrategy
-	Value         string
+type XPathConfig struct {
+	Strategy XPathStrategy `yaml:"strategy"`
+	Value    string        `yaml:"value"`
 }
 
-type XPaths map[string]XXX
+type XPath string
+
+func (xpath XPath) IsRoot() bool {
+	return xpath == XPathRoot
+}
+
+func (xpath XPath) NewChild(s string) XPath {
+	return XPath(filepath.Join(string(xpath), s))
+}
+
+type FileConfig map[XPath]XPathConfig
+
+type GlobalConfig struct {
+}
 
 type Config struct {
-	ChartName string            `yaml:"chartName"`
-	Rules     map[string]XPaths `yaml:"rules"`
+	Chartname     string                `yaml:"chartname"`
+	GlobalConfig  GlobalConfig          `yaml:"globalConfig"`
+	FileConfigMap map[string]FileConfig `yaml:"fileConfigMap"`
 }

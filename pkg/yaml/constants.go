@@ -6,7 +6,7 @@ const (
 	singleLineValueFormat = "{{ \"%s\" }}"
 	multilineKeyFormat    = "%s:"
 	multilineValueFormat  = "{{- include \"%s\" | nindent %d }}"
-	ifMixedFormat         = `{{- with %s }}
+	withMixedFormat       = `{{- with %s }}
 %s:
   {{- toYaml . | nindent %d }}
 {{- end }}`

@@ -25,3 +25,4 @@ mychart/
 
 # ./bin/kustohelmize create xyz
 xyz
+config.yaml

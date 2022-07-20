@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
@@ -10,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
+	goyaml "gopkg.in/yaml.v1"
 	"helm.sh/helm/v3/cmd/helm/require"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -61,27 +63,32 @@ func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 	}
 	defer file.Close()
 
-	chartName := filepath.Base(o.name)
+	chartname := filepath.Base(o.name)
 	config := &config.Config{
-		ChartName: chartName,
-		Rules: map[string]config.XPaths{
+		Chartname: chartname,
+		FileConfigMap: map[string]config.FileConfig{
 			filepath.Join(".", "test", "testdata", "service.yaml"): {
-				"/spec/type": {
-					FieldStrategy: config.FieldStrategyPlain,
-					Value:         "Values.xxx",
+				config.XPath("/spec/type"): {
+					Strategy: config.XPathStrategyInline,
+					Value:    "Values.xxx",
 				},
-				"/spec/selector": {
-					FieldStrategy: config.FieldStrategyNewline,
-					Value:         "Values.yyy",
+				config.XPath("/spec/selector"): {
+					Strategy: config.XPathStrategyNewline,
+					Value:    "Values.yyy",
 				},
-				"/spec/ports": {
-					FieldStrategy: config.FieldStrategyIf,
-					Value:         "Values.zzz",
+				config.XPath("/spec/ports"): {
+					Strategy: config.XPathStrategyControlWith,
+					Value:    "Values.zzz",
 				},
 			},
 		},
 	}
-	fmt.Println(config)
+	// TODO: Remove this
+	output, err := goyaml.Marshal(config)
+	if err != nil {
+		return err
+	}
+	ioutil.WriteFile(filepath.Join(filepath.Dir(o.name), "config.yaml"), output, 0644)
 	p := yaml.NewYAMLProcessor(logger, file, config)
 	err = p.Process()
 	if err != nil {
@@ -92,7 +99,7 @@ func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 
 	// TODO:
 	cfile := &chart.Metadata{
-		Name:        chartName,
+		Name:        chartname,
 		Description: "A Helm chart for Kubernetes",
 		Type:        "application",
 		Version:     "0.1.0",
@@ -111,6 +118,6 @@ func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 	}
 
 	chartutil.Stderr = out
-	_, err = chartutil.Create(chartName, filepath.Dir(o.name))
+	_, err = chartutil.Create(chartname, filepath.Dir(o.name))
 	return err
 }
