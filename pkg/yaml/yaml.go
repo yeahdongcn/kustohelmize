@@ -63,14 +63,18 @@ func indent(s string, n int) string {
 	return indented
 }
 
-func (p *YAMLProcessor) handleValue(v reflect.Value, nindent int, k reflect.Value, xpath config.XPath) bool {
+func (p *YAMLProcessor) handleSlice() {
+
+}
+
+func (p *YAMLProcessor) handleMap(v reflect.Value, nindent int, k reflect.Value, xpath config.XPath) bool {
 	aa := p.currentFileConfig[xpath]
 	xpathConfigs := []config.XPathConfig{aa, p.config.GlobalConfig[xpath]}
 
 	for _, xpathConfig := range xpathConfigs {
 		switch xpathConfig.Strategy {
 		case config.XPathStrategyInline:
-			// type: {{ .Values.service.type }}
+			// name: {{ include "mychart.fullname" . }}
 			key := fmt.Sprintf(singleLineKeyFormat, k)
 			fmt.Fprint(p.out, indent(key, nindent))
 			value := fmt.Sprintf(singleLineValueFormat, xpathConfig.Value)
@@ -85,6 +89,10 @@ func (p *YAMLProcessor) handleValue(v reflect.Value, nindent int, k reflect.Valu
 			fmt.Fprintln(p.out, indent(value, nindent+1))
 			return true
 		case config.XPathStrategyControlWith:
+			// {{- with .Values.tolerations }}
+			// tolerations:
+			//   {{- toYaml . | nindent 8 }}
+			// {{- end }}
 			mixed := fmt.Sprintf(withMixedFormat, xpathConfig.Value, k, (nindent+1)*2)
 			fmt.Fprintln(p.out, indent(mixed, nindent))
 			return true
@@ -93,7 +101,7 @@ func (p *YAMLProcessor) handleValue(v reflect.Value, nindent int, k reflect.Valu
 		case config.XPathStrategyControlRange:
 			p.logger.Debug("ControlRange not implemented")
 		default:
-			p.logger.Debugf("Unknown strategy: %s", xpathConfig.Strategy)
+			// p.logger.Debugf("Unknown strategy: %s", xpathConfig.Strategy)
 		}
 	}
 
@@ -107,11 +115,29 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
 		p.logger.Debugf("Array/Slice: %s", root)
-		if !root.IsRoot() {
+
+		continueProcess := false
+		if v.Len() > 0 {
+			first := v.Index(0)
+			for first.Kind() == reflect.Ptr || first.Kind() == reflect.Interface {
+				first = first.Elem()
+			}
+			if first.Kind() == reflect.Map {
+				continueProcess = true
+			}
+			if first.Kind() == reflect.Slice {
+				panic(10)
+			}
+		}
+		if !root.IsRoot() && !continueProcess {
 			fmt.Fprintln(p.out)
 		}
-		for i := 0; i < v.Len(); i++ {
-			p.walk(v.Index(i), nindent+1, root)
+		if continueProcess {
+			for i := 0; i < v.Len(); i++ {
+				p.walk(v.Index(i), nindent+1, root)
+			}
+		} else {
+			fmt.Fprintln(p.out, indent(fmt.Sprintf("%s", v), nindent))
 		}
 	case reflect.Map:
 		p.logger.Debugf("Map: %s", root)
@@ -124,7 +150,7 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
 				mapKey = k.Elem().String()
 			}
 			xpath := root.NewChild(mapKey)
-			if !p.handleValue(v, nindent, k, xpath) {
+			if !p.handleMap(v, nindent, k, xpath) {
 				key := fmt.Sprintf(singleLineKeyFormat, k)
 				fmt.Fprint(p.out, indent(key, nindent))
 				p.walk(v.MapIndex(k), nindent+1, xpath)
@@ -132,7 +158,12 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
 		}
 	default:
 		p.logger.Debugf("Default: %s", root)
+		p.logger.Debugf("%s", v.String())
 		fmt.Fprintln(p.out, v)
-		// handle other types
+		// panic(11)
+		// p.logger.Debugf("Default: %s", root)
+		// p.logger.Debugf("%s", v.String())
+
+		// // handle other types
 	}
 }
