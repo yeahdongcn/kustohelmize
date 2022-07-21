@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	"github.com/sirupsen/logrus"
@@ -22,6 +23,11 @@ type createOptions struct {
 	starter    string // --starter
 	name       string
 	starterDir string
+
+	// TODO: 1. Config file path 2. Source YAML file directory
+	outdir string
+	yaml   string
+	config string
 }
 
 func newCreateCmd(logger *logrus.Logger, out io.Writer) *cobra.Command {
@@ -44,12 +50,35 @@ func newCreateCmd(logger *logrus.Logger, out io.Writer) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o.name = args[0]
 			o.starterDir = helmpath.DataPath("starters")
+			if err := o.prepare(logger); err != nil {
+				return err
+			}
 			return o.run(logger, out)
 		},
 	}
 
 	cmd.Flags().StringVarP(&o.starter, "starter", "p", "", "the name or absolute path to Helm starter scaffold")
+	cmd.Flags().StringVarP(&o.yaml, "yaml", "y", "", "the input YAML file")
+	cmd.Flags().StringVarP(&o.outdir, "outdir", "o", "genereated", "the output directory")
+	cmd.MarkFlagRequired("outdir")
+	cmd.MarkFlagRequired("yaml")
 	return cmd
+}
+
+func (o *createOptions) prepare(logger *logrus.Logger) error {
+	e, err := os.Executable()
+	if err != nil {
+		logger.Errorf("Error getting executable path: %v", err)
+		return err
+	}
+	path := filepath.Join(filepath.Dir(e), "kubernetes-split-yaml")
+
+	_, err = exec.Command(path, "--outdir", o.outdir, o.yaml).CombinedOutput()
+	if err != nil {
+		logger.Errorf("Error running kubernetes-split-yaml: %v", err)
+		return err
+	}
+	return nil
 }
 
 func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
