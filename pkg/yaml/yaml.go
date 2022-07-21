@@ -63,6 +63,43 @@ func indent(s string, n int) string {
 	return indented
 }
 
+func (p *YAMLProcessor) handleValue(v reflect.Value, nindent int, k reflect.Value, xpath config.XPath) bool {
+	aa := p.currentFileConfig[xpath]
+	xpathConfigs := []config.XPathConfig{aa, p.config.GlobalConfig[xpath]}
+
+	for _, xpathConfig := range xpathConfigs {
+		switch xpathConfig.Strategy {
+		case config.XPathStrategyInline:
+			// type: {{ .Values.service.type }}
+			key := fmt.Sprintf(singleLineKeyFormat, k)
+			fmt.Fprint(p.out, indent(key, nindent))
+			value := fmt.Sprintf(singleLineValueFormat, xpathConfig.Value)
+			fmt.Fprintln(p.out, value)
+			return true
+		case config.XPathStrategyNewline:
+			// selector:
+			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
+			key := fmt.Sprintf(multilineKeyFormat, k)
+			fmt.Fprintln(p.out, indent(key, nindent))
+			value := fmt.Sprintf(multilineValueFormat, xpathConfig.Value, (nindent+1)*2)
+			fmt.Fprintln(p.out, indent(value, nindent+1))
+			return true
+		case config.XPathStrategyControlWith:
+			mixed := fmt.Sprintf(withMixedFormat, xpathConfig.Value, k, (nindent+1)*2)
+			fmt.Fprintln(p.out, indent(mixed, nindent))
+			return true
+		case config.XPathStrategyControlIf:
+			p.logger.Debug("ControlIf not implemented")
+		case config.XPathStrategyControlRange:
+			p.logger.Debug("ControlRange not implemented")
+		default:
+			p.logger.Debugf("Unknown strategy: %s", xpathConfig.Strategy)
+		}
+	}
+
+	return false
+}
+
 func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
 	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
 		v = v.Elem()
@@ -87,30 +124,7 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
 				mapKey = k.Elem().String()
 			}
 			xpath := root.NewChild(mapKey)
-
-			xpathConfig := p.currentFileConfig[xpath]
-			switch xpathConfig.Strategy {
-			case config.XPathStrategyInline:
-				// type: {{ .Values.service.type }}
-				key := fmt.Sprintf(singleLineKeyFormat, k)
-				fmt.Fprint(p.out, indent(key, nindent))
-				value := fmt.Sprintf(singleLineValueFormat, xpathConfig.Value)
-				fmt.Fprintln(p.out, value)
-			case config.XPathStrategyNewline:
-				// selector:
-				//   {{- include "mychart.selectorLabels" . | nindent 4 }}
-				key := fmt.Sprintf(multilineKeyFormat, k)
-				fmt.Fprintln(p.out, indent(key, nindent))
-				value := fmt.Sprintf(multilineValueFormat, xpathConfig.Value, (nindent+1)*2)
-				fmt.Fprintln(p.out, indent(value, nindent+1))
-			case config.XPathStrategyControlWith:
-				mixed := fmt.Sprintf(withMixedFormat, xpathConfig.Value, k, (nindent+1)*2)
-				fmt.Fprintln(p.out, indent(mixed, nindent))
-			case config.XPathStrategyControlIf:
-				p.logger.Debug("ControlIf not implemented")
-			case config.XPathStrategyControlRange:
-				p.logger.Debug("ControlRange not implemented")
-			default:
+			if !p.handleValue(v, nindent, k, xpath) {
 				key := fmt.Sprintf(singleLineKeyFormat, k)
 				fmt.Fprint(p.out, indent(key, nindent))
 				p.walk(v.MapIndex(k), nindent+1, xpath)

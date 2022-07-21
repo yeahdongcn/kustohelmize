@@ -94,18 +94,19 @@ func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 
 	chartname := filepath.Base(o.name)
 	config := &config.Config{
-		Chartname: chartname,
+		Chartname:    chartname,
+		GlobalConfig: *config.NewGlobalConfig(chartname),
 		FileConfigMap: map[string]config.FileConfig{
-			filepath.Join(".", "test", "testdata", "service.yaml"): {
-				config.XPath("/spec/type"): {
+			filepath.Join(".", "test", "testdata", "generated", "mt-controller-manager-deployment.yaml"): {
+				config.XPath("spec.type"): {
 					Strategy: config.XPathStrategyInline,
 					Value:    "Values.xxx",
 				},
-				config.XPath("/spec/selector"): {
+				config.XPath("spec.selector"): {
 					Strategy: config.XPathStrategyNewline,
 					Value:    "Values.yyy",
 				},
-				config.XPath("/spec/ports"): {
+				config.XPath("spec.ports"): {
 					Strategy: config.XPathStrategyControlWith,
 					Value:    "Values.zzz",
 				},

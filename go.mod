@@ -7,6 +7,7 @@ require (
 	github.com/spf13/cobra v1.5.0
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
 	helm.sh/helm/v3 v3.9.1
+	k8s.io/api v0.24.3
 )
 
 require (
@@ -31,7 +32,6 @@ require (
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.24.3 // indirect
 	k8s.io/apiextensions-apiserver v0.24.3 // indirect
 	k8s.io/apimachinery v0.24.3 // indirect
 	k8s.io/client-go v0.24.3 // indirect

@@ -1,6 +1,11 @@
 package config
 
-import "path/filepath"
+import (
+	"fmt"
+
+	"github.com/yeahdongcn/kustohelmize/pkg/chart"
+	corev1 "k8s.io/api/core/v1"
+)
 
 type XPathStrategy string
 
@@ -24,12 +29,33 @@ func (xpath XPath) IsRoot() bool {
 }
 
 func (xpath XPath) NewChild(s string) XPath {
-	return XPath(filepath.Join(string(xpath), s))
+	if xpath.IsRoot() {
+		return XPath(s)
+	}
+	return XPath(fmt.Sprintf("%s.%s", xpath, s))
 }
 
 type FileConfig map[XPath]XPathConfig
 
-type GlobalConfig struct {
+type GlobalConfig FileConfig
+
+func NewGlobalConfig(chartname string) *GlobalConfig {
+	return &GlobalConfig{
+		"metadata.name": {
+			Strategy: XPathStrategyInline,
+			Value:    fmt.Sprintf(chart.NameFormat, chartname),
+		},
+		"metadata.labels": {
+			Strategy: XPathStrategyNewline,
+			Value:    fmt.Sprintf(chart.CommonLabelsFormat, chartname),
+		},
+	}
+}
+
+// TODO: remove
+func xx() {
+	x := corev1.Pod{}
+	fmt.Println(x)
 }
 
 type Config struct {
