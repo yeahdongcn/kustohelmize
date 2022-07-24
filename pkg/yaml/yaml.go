@@ -177,8 +177,15 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 		}
 	default:
 		p.logger.Debugf("Default: %s", root)
-		p.logger.Debugf("%s", v.String())
-		fmt.Fprintln(p.out, v)
+		str := v.String()
+		p.logger.Debugf("%s", str)
+		// spec.template.spec.nodeSelector: Invalid type. Expected: [string,null], given: boolean
+		if str == "true" || str == "false" {
+			fmt.Fprintln(p.out, fmt.Sprintf("\"%s\"", v))
+		} else {
+			fmt.Fprintln(p.out, v)
+		}
+
 		// panic(11)
 		// p.logger.Debugf("Default: %s", root)
 		// p.logger.Debugf("%s", v.String())

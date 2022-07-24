@@ -13,8 +13,16 @@ help: ## Display this help.
 
 ##@ Build
 
+.PHONY: build
 build:
 	$(GO) build -o bin/kustohelmize $(CURDIR)/main.go
+
+##@ Test
+
+.PHONY: test
+test:
+	./bin/kustohelmize create --outdir ./test/testdata/generated --yaml ./test/testdata/mt-gpu-operator.yaml xyz
+	Kubeval xyz
 
 KUBERNETES-SPLIT-YAML = $(shell pwd)/bin/kubernetes-split-yaml
 .PHONY: kubernetes-split-yaml
