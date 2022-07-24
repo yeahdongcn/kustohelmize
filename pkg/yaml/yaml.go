@@ -44,19 +44,30 @@ func (p *YAMLProcessor) Process() error {
 
 		p.currentFileConfig = fileConfig
 		d := reflect.ValueOf(data)
-		p.walk(d, 0, config.XPathRoot)
+		p.walk(d, 0, config.XPathRoot, false)
 	}
 
 	return nil
 }
 
 func indent(s string, n int) string {
+	return xindent(s, n, false)
+}
+
+func xindent(s string, n int, fromSlice bool) string {
+	if n < 0 {
+		n = 0
+	}
 	indents := strings.Repeat(defaultIndent, n)
 
 	indented := ""
 	scanner := bufio.NewScanner(strings.NewReader(s))
 	for scanner.Scan() {
-		indented += indents + scanner.Text() + "\n"
+		if fromSlice && indented == "" {
+			indented += scanner.Text() + "\n"
+		} else {
+			indented += indents + scanner.Text() + "\n"
+		}
 	}
 	indented = strings.Trim(indented, "\n")
 
@@ -67,7 +78,7 @@ func (p *YAMLProcessor) handleSlice() {
 
 }
 
-func (p *YAMLProcessor) handleMap(v reflect.Value, nindent int, k reflect.Value, xpath config.XPath) bool {
+func (p *YAMLProcessor) handleMap(nindent int, k reflect.Value, xpath config.XPath) bool {
 	aa := p.currentFileConfig[xpath]
 	xpathConfigs := []config.XPathConfig{aa, p.config.GlobalConfig[xpath]}
 
@@ -108,7 +119,7 @@ func (p *YAMLProcessor) handleMap(v reflect.Value, nindent int, k reflect.Value,
 	return false
 }
 
-func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
+func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fromSlice bool) {
 	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
 		v = v.Elem()
 	}
@@ -134,14 +145,17 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
 		}
 		if continueProcess {
 			for i := 0; i < v.Len(); i++ {
-				p.walk(v.Index(i), nindent+1, root)
+				fmt.Fprint(p.out, indent("\n- ", nindent))
+				p.walk(v.Index(i), nindent+1, root, true)
 			}
 		} else {
-			fmt.Fprintln(p.out, indent(fmt.Sprintf("%s", v), nindent))
+			for i := 0; i < v.Len(); i++ {
+				fmt.Fprintln(p.out, indent(fmt.Sprintf("- %s", v.Index(i)), nindent))
+			}
 		}
 	case reflect.Map:
 		p.logger.Debugf("Map: %s", root)
-		if !root.IsRoot() {
+		if !root.IsRoot() && !fromSlice {
 			fmt.Fprintln(p.out)
 		}
 		for _, k := range v.MapKeys() {
@@ -150,10 +164,15 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath) {
 				mapKey = k.Elem().String()
 			}
 			xpath := root.NewChild(mapKey)
-			if !p.handleMap(v, nindent, k, xpath) {
+			if !p.handleMap(nindent, k, xpath) {
 				key := fmt.Sprintf(singleLineKeyFormat, k)
-				fmt.Fprint(p.out, indent(key, nindent))
-				p.walk(v.MapIndex(k), nindent+1, xpath)
+				if fromSlice {
+					fmt.Fprint(p.out, xindent(key, nindent, fromSlice))
+					fromSlice = false
+				} else {
+					fmt.Fprint(p.out, xindent(key, nindent, fromSlice))
+				}
+				p.walk(v.MapIndex(k), nindent+1, xpath, false)
 			}
 		}
 	default:
