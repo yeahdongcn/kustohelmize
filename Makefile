@@ -20,7 +20,7 @@ build:
 ##@ Test
 
 .PHONY: test
-test:
+test: build
 	./bin/kustohelmize create --outdir ./test/testdata/generated --yaml ./test/testdata/mt-gpu-operator.yaml xyz
 	Kubeval xyz
 

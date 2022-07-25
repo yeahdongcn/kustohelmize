@@ -145,7 +145,11 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 		}
 		if continueProcess {
 			for i := 0; i < v.Len(); i++ {
-				fmt.Fprint(p.out, indent("\n- ", nindent))
+				if i == 0 {
+					fmt.Fprint(p.out, indent(slicePrefixFirstLineFormat, nindent))
+				} else {
+					fmt.Fprint(p.out, indent(slicePrefixOtherLineFormat, nindent))
+				}
 				p.walk(v.Index(i), nindent+1, root, true)
 			}
 		} else {

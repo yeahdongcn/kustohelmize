@@ -10,4 +10,6 @@ const (
 %s:
   {{- toYaml . | nindent %d }}
 {{- end }}`
+	slicePrefixFirstLineFormat = "\n- "
+	slicePrefixOtherLineFormat = "- "
 )
