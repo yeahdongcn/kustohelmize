@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -33,7 +34,20 @@ func NewYAMLProcessor(logger logr.Logger, destDir string, config *config.Config)
 
 func (p *YAMLProcessor) Process() error {
 	for filename, fileConfig := range p.config.FileConfigMap {
-		dest := filepath.Join(p.destDir, filepath.Base(filename))
+		z := filepath.Base(filename)
+		if z != "mt-manager-role-cr.yaml" {
+			continue
+		}
+		dest := filepath.Join(p.destDir, z)
+		if strings.HasSuffix(z, "-crd.yaml") {
+			err := exec.Command("cp", "-f", filename, dest).Run()
+			if err != nil {
+				p.logger.Error(err, "Failed to copy file", "source", filename, "dest", dest)
+				return err
+			}
+			continue
+		}
+
 		file, err := os.Create(dest)
 		if err != nil {
 			p.logger.Error(err, "Error creating file", "dest", dest)
@@ -166,7 +180,19 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 			}
 		} else {
 			for i := 0; i < v.Len(); i++ {
-				fmt.Fprintln(p.out, indent(fmt.Sprintf("- %s", v.Index(i)), nindent))
+				x := v.Index(i)
+				if x.Kind() == reflect.Ptr || x.Kind() == reflect.Interface {
+					x = x.Elem()
+				}
+				str := x.String()
+				p.logger.Info(str)
+				if str == "" {
+					fmt.Fprintln(p.out, indent(fmt.Sprintf("- \"%s\"", x), nindent))
+				} else if str == "*" {
+					fmt.Fprintln(p.out, indent(fmt.Sprintf("- '%s'", x), nindent))
+				} else {
+					fmt.Fprintln(p.out, indent(fmt.Sprintf("- %s", x), nindent))
+				}
 			}
 		}
 	case reflect.Map:
@@ -193,19 +219,19 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 			}
 		}
 	default:
+		if v.Kind() == reflect.Invalid {
+			fmt.Fprintln(p.out, "null")
+			return
+		}
 		str := v.String()
 		p.logger.V(10).Info("Handling default", "root", root, "str", str)
 		// spec.template.spec.nodeSelector: Invalid type. Expected: [string,null], given: boolean
-		if str == "true" || str == "false" {
+		if str == "true" || str == "false" || str == "" {
 			fmt.Fprintln(p.out, fmt.Sprintf("\"%s\"", v))
+		} else if strings.Contains(str, "\n") {
+			fmt.Fprintln(p.out, fmt.Sprintf("|\n%s", v))
 		} else {
 			fmt.Fprintln(p.out, v)
 		}
-
-		// panic(11)
-		// p.logger.Debugf("Default: %s", root)
-		// p.logger.Debugf("%s", v.String())
-
-		// // handle other types
 	}
 }

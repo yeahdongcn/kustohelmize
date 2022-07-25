@@ -5,13 +5,14 @@ import (
 	"os"
 
 	"github.com/yeahdongcn/kustohelmize/cmd"
+	"go.uber.org/zap/zapcore"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func main() {
 	opts := zap.Options{
 		Development: true,
-		// Level:       zapcore.Level(-10),
+		Level:       zapcore.Level(-10),
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
