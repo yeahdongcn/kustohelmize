@@ -10,6 +10,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
+	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
 	goyaml "gopkg.in/yaml.v1"
@@ -57,13 +58,7 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 			o.starterDir = helmpath.DataPath("starters")
 
 			if o.intermediateDir == "" {
-				intermediateDir, err := ioutil.TempDir("", "tmp-")
-				if err != nil {
-					logger.Error(err, "Error creating temporary directory")
-					return err
-				}
-				logger.V(10).Info("Creating temporary directory", "path", intermediateDir)
-				o.intermediateDir = intermediateDir
+				o.intermediateDir = fmt.Sprintf("%s-%s", o.name, "generated")
 			}
 			if o.enableIntermediateDirCleanup {
 				defer os.RemoveAll(o.intermediateDir)
@@ -79,9 +74,9 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	cmd.Flags().StringVarP(&o.from, "from", "f", "", "TODO")
 	cmd.MarkFlagRequired("from")
 	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
-
 	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "c", false, "TODO")
 	cmd.Flags().StringVarP(&o.intermediateDir, "intermediate-dir", "i", "", "TODO")
+
 	cmd.Flags().StringVarP(&o.starter, "starter", "p", "", "the name or absolute path to Helm starter scaffold")
 	return cmd
 }
@@ -102,13 +97,35 @@ func (o *createOptions) prepare() error {
 	return nil
 }
 
+func (o *createOptions) chartname() string {
+	return filepath.Base(o.name)
+}
+
 func (o *createOptions) configPath() string {
-	return filepath.Join(filepath.Dir(o.name), "kustohelmize.config")
+	return filepath.Join(filepath.Dir(o.name), fmt.Sprintf("%s.config", o.chartname()))
 }
 
 func (o *createOptions) getConfig() (*cfg.Config, error) {
-	chartname := filepath.Base(o.name)
+	chartname := o.chartname()
 	path := o.configPath()
+
+	_, err := os.Stat(path)
+	if err == nil {
+		o.logger.Info("Config file already exists", "path", path)
+
+		out, err := ioutil.ReadFile(path)
+		if err != nil {
+			o.logger.Error(err, "Error reading config file")
+			return nil, err
+		}
+		config := &config.Config{}
+		err = goyaml.Unmarshal(out, config)
+		if err != nil {
+			o.logger.Error(err, "Error parsing config file")
+			return nil, err
+		}
+		return config, nil
+	}
 
 	config := &cfg.Config{
 		Chartname:     chartname,

@@ -22,6 +22,6 @@ bin/
 
 # Tests
 test/testdata/
-mychart/
+mychart.config
 mychart-generated/
-kustohelmize.config
+mychart/

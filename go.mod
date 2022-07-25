@@ -5,9 +5,9 @@ go 1.18
 require (
 	github.com/go-logr/logr v1.2.3
 	github.com/spf13/cobra v1.5.0
+	go.uber.org/zap v1.19.1
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
 	helm.sh/helm/v3 v3.9.1
-	k8s.io/api v0.24.3
 	sigs.k8s.io/controller-runtime v0.12.3
 )
 
@@ -30,12 +30,12 @@ require (
 	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.uber.org/atomic v1.7.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.19.1 // indirect
 	golang.org/x/net v0.0.0-20220708220712-1185a9018129 // indirect
 	golang.org/x/sys v0.0.0-20220715151400-c0bba94af5f8 // indirect
 	golang.org/x/text v0.3.7 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
+	k8s.io/api v0.24.3 // indirect
 	k8s.io/apiextensions-apiserver v0.24.3 // indirect
 	k8s.io/apimachinery v0.24.3 // indirect
 	k8s.io/client-go v0.24.3 // indirect

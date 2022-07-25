@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
-	corev1 "k8s.io/api/core/v1"
 )
 
 type XPathStrategy string
@@ -50,12 +49,6 @@ func NewGlobalConfig(chartname string) *GlobalConfig {
 			Value:    fmt.Sprintf(chart.CommonLabelsFormat, chartname),
 		},
 	}
-}
-
-// TODO: remove
-func xx() {
-	x := corev1.Pod{}
-	fmt.Println(x)
 }
 
 type Config struct {

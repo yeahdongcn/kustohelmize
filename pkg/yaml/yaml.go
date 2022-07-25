@@ -35,9 +35,6 @@ func NewYAMLProcessor(logger logr.Logger, destDir string, config *config.Config)
 func (p *YAMLProcessor) Process() error {
 	for filename, fileConfig := range p.config.FileConfigMap {
 		z := filepath.Base(filename)
-		if z != "mt-manager-role-cr.yaml" {
-			continue
-		}
 		dest := filepath.Join(p.destDir, z)
 		if strings.HasSuffix(z, "-crd.yaml") {
 			err := exec.Command("cp", "-f", filename, dest).Run()
