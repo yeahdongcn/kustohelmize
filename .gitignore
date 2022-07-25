@@ -17,12 +17,11 @@ vendor/
 # Binaries
 bin/
 
-# Sample helm chart
-mychart/
-
 # vscode extensions
 .vscode
 
-# ./bin/kustohelmize create xyz
+# Tests
 test/testdata/
+mychart/
+mychart-generated/
 kustohelmize.config

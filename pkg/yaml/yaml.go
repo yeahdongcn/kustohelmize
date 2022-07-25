@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -17,19 +19,29 @@ type YAMLProcessor struct {
 	logger            logr.Logger
 	out               io.Writer
 	config            *config.Config
+	destDir           string
 	currentFileConfig config.FileConfig
 }
 
-func NewYAMLProcessor(logger logr.Logger, out io.Writer, config *config.Config) *YAMLProcessor {
+func NewYAMLProcessor(logger logr.Logger, destDir string, config *config.Config) *YAMLProcessor {
 	return &YAMLProcessor{
-		logger: logger,
-		out:    out,
-		config: config,
+		logger:  logger,
+		destDir: destDir,
+		config:  config,
 	}
 }
 
 func (p *YAMLProcessor) Process() error {
 	for filename, fileConfig := range p.config.FileConfigMap {
+		dest := filepath.Join(p.destDir, filepath.Base(filename))
+		file, err := os.Create(dest)
+		if err != nil {
+			p.logger.Error(err, "Error creating file", "dest", dest)
+			return err
+		}
+		defer file.Close()
+		p.out = file
+
 		b, err := ioutil.ReadFile(filename)
 		if err != nil {
 			p.logger.Error(err, "Error reading YAML", "filename", filename)

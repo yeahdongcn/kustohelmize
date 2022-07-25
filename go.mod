@@ -4,7 +4,6 @@ go 1.18
 
 require (
 	github.com/go-logr/logr v1.2.3
-	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/cobra v1.5.0
 	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
 	helm.sh/helm/v3 v3.9.1

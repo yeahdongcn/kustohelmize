@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -11,7 +10,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
 	goyaml "gopkg.in/yaml.v1"
@@ -108,41 +106,11 @@ func (o *createOptions) configPath() string {
 	return filepath.Join(filepath.Dir(o.name), "kustohelmize.config")
 }
 
-func (o *createOptions) createConfigFile() error {
+func (o *createOptions) getConfig() (*cfg.Config, error) {
 	chartname := filepath.Base(o.name)
 	path := o.configPath()
-	_, err := os.Stat(path)
-	if err == nil {
-		o.logger.Info("Config file already exists", "path", path)
-		out, err := ioutil.ReadFile(path)
-		if err != nil {
-			o.logger.Error(err, "Error reading config file")
-			return err
-		}
-		config := &config.Config{}
-		err = goyaml.Unmarshal(out, config)
-		if err != nil {
-			o.logger.Error(err, "Error parsing config file")
-			return err
-		}
-		// Perform any necessary updates to the config file
-		if config.Chartname != chartname {
-			o.logger.Info("Update config file", "oldname", config.Chartname, "newname", chartname)
-			config.Chartname = chartname
-			config.GlobalConfig = *cfg.NewGlobalConfig(chartname)
-			output, err := goyaml.Marshal(config)
-			if err != nil {
-				o.logger.Error(err, "Error marshalling config file")
-				return err
-			}
-			return ioutil.WriteFile(path, output, 0644)
-		}
-		return nil
-	} else if !errors.Is(err, os.ErrNotExist) {
-		return err
-	}
 
-	config := &config.Config{
+	config := &cfg.Config{
 		Chartname:     chartname,
 		GlobalConfig:  *cfg.NewGlobalConfig(chartname),
 		FileConfigMap: map[string]cfg.FileConfig{},
@@ -157,17 +125,17 @@ func (o *createOptions) createConfigFile() error {
 	output, err := goyaml.Marshal(config)
 	if err != nil {
 		o.logger.Error(err, "Error marshalling config file")
-		return err
+		return nil, err
 	}
-	return ioutil.WriteFile(path, output, 0644)
+	return config, ioutil.WriteFile(path, output, 0644)
 }
 
 func (o *createOptions) run(out io.Writer) error {
 	o.logger.Info("Creating chart", "name", o.name)
 
-	err := o.createConfigFile()
+	config, err := o.getConfig()
 	if err != nil {
-		o.logger.Error(err, "Error creating config file")
+		o.logger.Error(err, "Error getting config")
 		return err
 	}
 
@@ -214,16 +182,11 @@ func (o *createOptions) run(out io.Writer) error {
 		os.Remove(file)
 	}
 
-	c, err := os.ReadDir(o.intermediateDir)
-	for _, entry := range c {
-		dest := filepath.Join(cdir, chartutil.TemplatesDir, entry.Name())
-
-		p := yaml.NewYAMLProcessor(o.logger, file, config)
-		err = p.Process()
-		if err != nil {
-			o.logger.Error(err, "Error processing YAML", "name", entry.Name())
-			return err
-		}
+	p := yaml.NewYAMLProcessor(o.logger, filepath.Join(cdir, chartutil.TemplatesDir), config)
+	err = p.Process()
+	if err != nil {
+		o.logger.Error(err, "Error processing YAML")
+		return err
 	}
 
 	// config := &config.Config{
