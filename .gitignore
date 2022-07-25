@@ -24,6 +24,5 @@ mychart/
 .vscode
 
 # ./bin/kustohelmize create xyz
-xyz
-config.yaml
 test/testdata/
+kustohelmize.config

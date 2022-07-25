@@ -8,19 +8,19 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	"gopkg.in/yaml.v1"
 )
 
 type YAMLProcessor struct {
-	logger            *logrus.Logger
+	logger            logr.Logger
 	out               io.Writer
 	config            *config.Config
 	currentFileConfig config.FileConfig
 }
 
-func NewYAMLProcessor(logger *logrus.Logger, out io.Writer, config *config.Config) *YAMLProcessor {
+func NewYAMLProcessor(logger logr.Logger, out io.Writer, config *config.Config) *YAMLProcessor {
 	return &YAMLProcessor{
 		logger: logger,
 		out:    out,
@@ -32,13 +32,13 @@ func (p *YAMLProcessor) Process() error {
 	for filename, fileConfig := range p.config.FileConfigMap {
 		b, err := ioutil.ReadFile(filename)
 		if err != nil {
-			p.logger.Errorf("Error reading file %s: %v", filename, err)
+			p.logger.Error(err, "Error reading YAML", "filename", filename)
 			return err
 		}
 		data := make(map[string]interface{})
 		err = yaml.Unmarshal(b, &data)
 		if err != nil {
-			p.logger.Errorf("Error unmarshalling file %s: %v", filename, err)
+			p.logger.Error(err, "Error unmarshalling YAML", "filename", filename)
 			return err
 		}
 
@@ -108,9 +108,9 @@ func (p *YAMLProcessor) handleMap(nindent int, k reflect.Value, xpath config.XPa
 			fmt.Fprintln(p.out, indent(mixed, nindent))
 			return true
 		case config.XPathStrategyControlIf:
-			p.logger.Debug("ControlIf not implemented")
+			p.logger.Info("ControlIf not implemented")
 		case config.XPathStrategyControlRange:
-			p.logger.Debug("ControlRange not implemented")
+			p.logger.Info("ControlRange not implemented")
 		default:
 			// p.logger.Debugf("Unknown strategy: %s", xpathConfig.Strategy)
 		}
@@ -125,7 +125,7 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 	}
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
-		p.logger.Debugf("Array/Slice: %s", root)
+		p.logger.V(10).Info("Handling slice", "root", root)
 
 		continueProcess := false
 		if v.Len() > 0 {
@@ -158,7 +158,8 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 			}
 		}
 	case reflect.Map:
-		p.logger.Debugf("Map: %s", root)
+		p.logger.V(10).Info("Handling map", "root", root)
+
 		if !root.IsRoot() && !fromSlice {
 			fmt.Fprintln(p.out)
 		}
@@ -180,9 +181,8 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 			}
 		}
 	default:
-		p.logger.Debugf("Default: %s", root)
 		str := v.String()
-		p.logger.Debugf("%s", str)
+		p.logger.V(10).Info("Handling default", "root", root, "str", str)
 		// spec.template.spec.nodeSelector: Invalid type. Expected: [string,null], given: boolean
 		if str == "true" || str == "false" {
 			fmt.Fprintln(p.out, fmt.Sprintf("\"%s\"", v))

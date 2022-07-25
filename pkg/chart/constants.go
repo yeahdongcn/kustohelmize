@@ -1,10 +1,11 @@
 package chart
 
 const (
-	NameFormat           = "%s.name"
-	FullNameFormat       = "%s.fullname"
-	ChartFormat          = "%s.chart"
-	CommonLabelsFormat   = "%s.labels"
-	SelectorLabelsFormat = "%s.selectorLabels"
-	ServiceAccountName   = "%s.serviceAccountName"
+	// XXX: Update this when defaultHelpers changes in helm/pkg/chartutil/create.go.
+	NameFormat               = "%s.name"
+	FullNameFormat           = "%s.fullname"
+	ChartFormat              = "%s.chart"
+	CommonLabelsFormat       = "%s.labels"
+	SelectorLabelsFormat     = "%s.selectorLabels"
+	ServiceAccountNameFormat = "%s.serviceAccountName"
 )

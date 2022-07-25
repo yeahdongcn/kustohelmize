@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -8,9 +9,10 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/sirupsen/logrus"
+	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
+	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
 	goyaml "gopkg.in/yaml.v1"
 	"helm.sh/helm/v3/cmd/helm/require"
@@ -25,13 +27,18 @@ type createOptions struct {
 	starterDir string
 
 	// TODO: 1. Config file path 2. Source YAML file directory
-	outdir string
-	yaml   string
-	config string
+	from                         string
+	kubernetesSplitYamlCommand   string
+	intermediateDir              string
+	enableIntermediateDirCleanup bool
+
+	logger logr.Logger
 }
 
-func newCreateCmd(logger *logrus.Logger, out io.Writer) *cobra.Command {
-	o := &createOptions{}
+func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
+	o := &createOptions{
+		logger: logger,
+	}
 
 	cmd := &cobra.Command{
 		Use:   "create NAME",
@@ -50,84 +57,122 @@ func newCreateCmd(logger *logrus.Logger, out io.Writer) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o.name = args[0]
 			o.starterDir = helmpath.DataPath("starters")
-			if err := o.prepare(logger); err != nil {
+
+			if o.intermediateDir == "" {
+				intermediateDir, err := ioutil.TempDir("", "tmp-")
+				if err != nil {
+					logger.Error(err, "Error creating temporary directory")
+					return err
+				}
+				logger.V(10).Info("Creating temporary directory", "path", intermediateDir)
+				o.intermediateDir = intermediateDir
+			}
+			if o.enableIntermediateDirCleanup {
+				defer os.RemoveAll(o.intermediateDir)
+			}
+			if err := o.prepare(); err != nil {
 				return err
 			}
-			return o.run(logger, out)
+
+			return o.run(out)
 		},
 	}
 
+	cmd.Flags().StringVarP(&o.from, "from", "f", "", "TODO")
+	cmd.MarkFlagRequired("from")
+	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
+
+	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "c", false, "TODO")
+	cmd.Flags().StringVarP(&o.intermediateDir, "intermediate-dir", "i", "", "TODO")
 	cmd.Flags().StringVarP(&o.starter, "starter", "p", "", "the name or absolute path to Helm starter scaffold")
-	cmd.Flags().StringVarP(&o.yaml, "yaml", "y", "", "the input YAML file")
-	cmd.Flags().StringVarP(&o.outdir, "outdir", "o", "genereated", "the output directory")
-	cmd.MarkFlagRequired("outdir")
-	cmd.MarkFlagRequired("yaml")
 	return cmd
 }
 
-func (o *createOptions) prepare(logger *logrus.Logger) error {
+func (o *createOptions) prepare() error {
 	e, err := os.Executable()
 	if err != nil {
-		logger.Errorf("Error getting executable path: %v", err)
+		o.logger.Error(err, "Error getting executable path")
 		return err
 	}
-	path := filepath.Join(filepath.Dir(e), "kubernetes-split-yaml")
 
-	_, err = exec.Command(path, "--outdir", o.outdir, o.yaml).CombinedOutput()
+	path := filepath.Join(filepath.Dir(e), o.kubernetesSplitYamlCommand)
+	_, err = exec.Command(path, "--outdir", o.intermediateDir, o.from).CombinedOutput()
 	if err != nil {
-		logger.Errorf("Error running kubernetes-split-yaml: %v", err)
+		o.logger.Error(err, fmt.Sprintf("Error running %s", path))
 		return err
 	}
 	return nil
 }
 
-func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
-	fmt.Fprintf(out, "Creating %s\n", o.name)
-	fmt.Fprintf(out, "Creating %s\n", filepath.Dir(o.name))
+func (o *createOptions) configPath() string {
+	return filepath.Join(filepath.Dir(o.name), "kustohelmize.config")
+}
 
-	file, err := os.Create(filepath.Join(filepath.Dir(o.name), o.name))
-	if err != nil {
-		logger.Errorf("Error creating file: %s", err)
+func (o *createOptions) createConfigFile() error {
+	chartname := filepath.Base(o.name)
+	path := o.configPath()
+	_, err := os.Stat(path)
+	if err == nil {
+		o.logger.Info("Config file already exists", "path", path)
+		out, err := ioutil.ReadFile(path)
+		if err != nil {
+			o.logger.Error(err, "Error reading config file")
+			return err
+		}
+		config := &config.Config{}
+		err = goyaml.Unmarshal(out, config)
+		if err != nil {
+			o.logger.Error(err, "Error parsing config file")
+			return err
+		}
+		// Perform any necessary updates to the config file
+		if config.Chartname != chartname {
+			o.logger.Info("Update config file", "oldname", config.Chartname, "newname", chartname)
+			config.Chartname = chartname
+			config.GlobalConfig = *cfg.NewGlobalConfig(chartname)
+			output, err := goyaml.Marshal(config)
+			if err != nil {
+				o.logger.Error(err, "Error marshalling config file")
+				return err
+			}
+			return ioutil.WriteFile(path, output, 0644)
+		}
+		return nil
+	} else if !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	defer file.Close()
 
-	chartname := filepath.Base(o.name)
 	config := &config.Config{
-		Chartname:    chartname,
-		GlobalConfig: *config.NewGlobalConfig(chartname),
-		FileConfigMap: map[string]config.FileConfig{
-			filepath.Join(".", "test", "testdata", "generated", "mt-controller-manager-deployment.yaml"): {
-				config.XPath("spec.type"): {
-					Strategy: config.XPathStrategyInline,
-					Value:    "Values.xxx",
-				},
-				config.XPath("spec.selector"): {
-					Strategy: config.XPathStrategyNewline,
-					Value:    "Values.yyy",
-				},
-				config.XPath("spec.ports"): {
-					Strategy: config.XPathStrategyControlWith,
-					Value:    "Values.zzz",
-				},
-			},
-		},
+		Chartname:     chartname,
+		GlobalConfig:  *cfg.NewGlobalConfig(chartname),
+		FileConfigMap: map[string]cfg.FileConfig{},
 	}
-	// TODO: Remove this
+
+	c, err := os.ReadDir(o.intermediateDir)
+	for _, entry := range c {
+		config.FileConfigMap[filepath.Join(o.intermediateDir, entry.Name())] = cfg.FileConfig{}
+		o.logger.V(10).Info("Split YAML file", "name", entry.Name())
+	}
+
 	output, err := goyaml.Marshal(config)
 	if err != nil {
+		o.logger.Error(err, "Error marshalling config file")
 		return err
 	}
-	ioutil.WriteFile(filepath.Join(filepath.Dir(o.name), "config.yaml"), output, 0644)
-	p := yaml.NewYAMLProcessor(logger, file, config)
-	err = p.Process()
-	if err != nil {
-		logger.Errorf("Error processing YAML: %s", err)
-		return err
-	}
-	return nil
+	return ioutil.WriteFile(path, output, 0644)
+}
 
-	// TODO:
+func (o *createOptions) run(out io.Writer) error {
+	o.logger.Info("Creating chart", "name", o.name)
+
+	err := o.createConfigFile()
+	if err != nil {
+		o.logger.Error(err, "Error creating config file")
+		return err
+	}
+
+	chartname := filepath.Base(o.name)
+	cdir := filepath.Dir(o.name)
 	cfile := &chart.Metadata{
 		Name:        chartname,
 		Description: "A Helm chart for Kubernetes",
@@ -144,10 +189,72 @@ func (o *createOptions) run(logger *logrus.Logger, out io.Writer) error {
 		if filepath.IsAbs(o.starter) {
 			lstarter = o.starter
 		}
-		return chartutil.CreateFrom(cfile, filepath.Dir(o.name), lstarter)
+		return chartutil.CreateFrom(cfile, cdir, lstarter)
 	}
 
 	chartutil.Stderr = out
-	_, err = chartutil.Create(chartname, filepath.Dir(o.name))
-	return err
+	_, err = chartutil.Create(chartname, cdir)
+	if err != nil {
+		o.logger.Error(err, "Error creating chart", "name", o.name)
+		return err
+	}
+
+	cdir = filepath.Join(cdir, chartname)
+	files := []string{
+		filepath.Join(cdir, chartutil.IngressFileName),
+		filepath.Join(cdir, chartutil.DeploymentName),
+		filepath.Join(cdir, chartutil.ServiceName),
+		filepath.Join(cdir, chartutil.ServiceAccountName),
+		filepath.Join(cdir, chartutil.HorizontalPodAutoscalerName),
+		filepath.Join(cdir, chartutil.NotesName),
+	}
+	for _, file := range files {
+		o.logger.V(10).Info("Removing file", "name", file)
+		// Explicitly ignore errors here.
+		os.Remove(file)
+	}
+
+	c, err := os.ReadDir(o.intermediateDir)
+	for _, entry := range c {
+		dest := filepath.Join(cdir, chartutil.TemplatesDir, entry.Name())
+
+		p := yaml.NewYAMLProcessor(o.logger, file, config)
+		err = p.Process()
+		if err != nil {
+			o.logger.Error(err, "Error processing YAML", "name", entry.Name())
+			return err
+		}
+	}
+
+	// config := &config.Config{
+	// 	Chartname:    chartname,
+	// 	GlobalConfig: *config.NewGlobalConfig(chartname),
+	// 	FileConfigMap: map[string]config.FileConfig{
+	// 		filepath.Join(".", "test", "testdata", "generated", "mt-controller-manager-deployment.yaml"): {
+	// 			config.XPath("spec.type"): {
+	// 				Strategy: config.XPathStrategyInline,
+	// 				Value:    "Values.xxx",
+	// 			},
+	// 			config.XPath("spec.selector"): {
+	// 				Strategy: config.XPathStrategyNewline,
+	// 				Value:    "Values.yyy",
+	// 			},
+	// 			config.XPath("spec.ports"): {
+	// 				Strategy: config.XPathStrategyControlWith,
+	// 				Value:    "Values.zzz",
+	// 			},
+	// 		},
+	// 	},
+	// }
+
+	// p := yaml.NewYAMLProcessor(logger, file, config)
+	// err = p.Process()
+	// if err != nil {
+	// 	logger.Errorf("Error processing YAML: %s", err)
+	// 	return err
+	// }
+	return nil
+
+	// TODO:
+
 }
