@@ -19,7 +19,7 @@ const (
 type XPathConfig struct {
 	Strategy XPathStrategy `yaml:"strategy"`
 	Key      string        `yaml:"key"`
-	Value    string        `yaml:"value"`
+	Value    string        `yaml:"value,omitempty"`
 }
 
 type XPath string
@@ -56,5 +56,5 @@ func NewGlobalConfig(chartname string) *Config {
 type ChartConfig struct {
 	Chartname     string            `yaml:"chartname"`
 	GlobalConfig  Config            `yaml:"globalConfig"`
-	PerFileConfig map[string]Config `yaml:"fileConfigMap"`
+	PerFileConfig map[string]Config `yaml:"perFileConfig"`
 }
