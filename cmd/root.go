@@ -9,8 +9,8 @@ import (
 
 func NewRootCmd(logger logr.Logger, out io.Writer, args []string) (*cobra.Command, error) {
 	cmd := &cobra.Command{
-		Use:          "xxx",
-		Short:        "The Helm package manager for Kubernetes.",
+		Use:          "kustohelmize",
+		Short:        "From a YAML file, generate a Helm chart",
 		Long:         ``,
 		SilenceUsage: true,
 	}

@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
+	"github.com/yeahdongcn/kustohelmize/pkg/util"
+	"github.com/yeahdongcn/kustohelmize/pkg/value"
 	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
 	goyaml "gopkg.in/yaml.v1"
 	"helm.sh/helm/v3/cmd/helm/require"
@@ -21,22 +23,22 @@ import (
 )
 
 type createOptions struct {
-	starter    string // --starter
-	name       string
-	starterDir string
+	logger logr.Logger
 
-	// TODO: 1. Config file path 2. Source YAML file directory
 	from                         string
 	kubernetesSplitYamlCommand   string
 	intermediateDir              string
 	enableIntermediateDirCleanup bool
 
-	logger logr.Logger
+	// From helm.
+	starter    string // --starter
+	name       string
+	starterDir string
 }
 
 func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	o := &createOptions{
-		logger: logger,
+		logger: logger.WithName("create"),
 	}
 
 	cmd := &cobra.Command{
@@ -97,6 +99,10 @@ func (o *createOptions) prepare() error {
 	return nil
 }
 
+func (o *createOptions) chartroot() string {
+	return filepath.Dir(o.name)
+}
+
 func (o *createOptions) chartname() string {
 	return filepath.Base(o.name)
 }
@@ -106,27 +112,26 @@ func (o *createOptions) configPath() string {
 }
 
 func (o *createOptions) getConfig() (*cfg.Config, error) {
-	chartname := o.chartname()
 	path := o.configPath()
-
 	_, err := os.Stat(path)
 	if err == nil {
 		o.logger.Info("Config file already exists", "path", path)
 
 		out, err := ioutil.ReadFile(path)
 		if err != nil {
-			o.logger.Error(err, "Error reading config file")
+			o.logger.Error(err, "Error reading config file", "path", path)
 			return nil, err
 		}
 		config := &config.Config{}
 		err = goyaml.Unmarshal(out, config)
 		if err != nil {
-			o.logger.Error(err, "Error parsing config file")
+			o.logger.Error(err, "Error unmarshalling config file", "path", path)
 			return nil, err
 		}
 		return config, nil
 	}
 
+	chartname := o.chartname()
 	config := &cfg.Config{
 		Chartname:     chartname,
 		GlobalConfig:  *cfg.NewGlobalConfig(chartname),
@@ -135,8 +140,10 @@ func (o *createOptions) getConfig() (*cfg.Config, error) {
 
 	c, err := os.ReadDir(o.intermediateDir)
 	for _, entry := range c {
-		config.FileConfigMap[filepath.Join(o.intermediateDir, entry.Name())] = cfg.FileConfig{}
-		o.logger.V(10).Info("Split YAML file", "name", entry.Name())
+		if !util.IsCustomResourceDefinition(entry.Name()) {
+			config.FileConfigMap[filepath.Join(o.intermediateDir, entry.Name())] = cfg.FileConfig{}
+			o.logger.V(10).Info("Split YAML file", "name", entry.Name())
+		}
 	}
 
 	output, err := goyaml.Marshal(config)
@@ -156,8 +163,8 @@ func (o *createOptions) run(out io.Writer) error {
 		return err
 	}
 
-	chartname := filepath.Base(o.name)
-	cdir := filepath.Dir(o.name)
+	chartname := o.chartname()
+	chartroot := o.chartroot()
 	cfile := &chart.Metadata{
 		Name:        chartname,
 		Description: "A Helm chart for Kubernetes",
@@ -174,24 +181,24 @@ func (o *createOptions) run(out io.Writer) error {
 		if filepath.IsAbs(o.starter) {
 			lstarter = o.starter
 		}
-		return chartutil.CreateFrom(cfile, cdir, lstarter)
+		return chartutil.CreateFrom(cfile, chartroot, lstarter)
 	}
 
 	chartutil.Stderr = out
-	_, err = chartutil.Create(chartname, cdir)
+	_, err = chartutil.Create(chartname, chartroot)
 	if err != nil {
 		o.logger.Error(err, "Error creating chart", "name", o.name)
 		return err
 	}
 
-	cdir = filepath.Join(cdir, chartname)
+	chartdir := filepath.Join(chartroot, chartname)
 	files := []string{
-		filepath.Join(cdir, chartutil.IngressFileName),
-		filepath.Join(cdir, chartutil.DeploymentName),
-		filepath.Join(cdir, chartutil.ServiceName),
-		filepath.Join(cdir, chartutil.ServiceAccountName),
-		filepath.Join(cdir, chartutil.HorizontalPodAutoscalerName),
-		filepath.Join(cdir, chartutil.NotesName),
+		filepath.Join(chartdir, chartutil.IngressFileName),
+		filepath.Join(chartdir, chartutil.DeploymentName),
+		filepath.Join(chartdir, chartutil.ServiceName),
+		filepath.Join(chartdir, chartutil.ServiceAccountName),
+		filepath.Join(chartdir, chartutil.HorizontalPodAutoscalerName),
+		filepath.Join(chartdir, chartutil.NotesName),
 	}
 	for _, file := range files {
 		o.logger.V(10).Info("Removing file", "name", file)
@@ -199,42 +206,18 @@ func (o *createOptions) run(out io.Writer) error {
 		os.Remove(file)
 	}
 
-	p := yaml.NewYAMLProcessor(o.logger, filepath.Join(cdir, chartutil.TemplatesDir), config)
+	v := value.NewValueProcessor(o.logger.WithName("value"), config)
+	err = v.Process()
+	if err != nil {
+		o.logger.Error(err, "Error processing values")
+	}
+
+	p := yaml.NewYAMLProcessor(o.logger.WithName("template"), filepath.Join(chartdir, chartutil.TemplatesDir), config)
 	err = p.Process()
 	if err != nil {
 		o.logger.Error(err, "Error processing YAML")
 		return err
 	}
 
-	// config := &config.Config{
-	// 	Chartname:    chartname,
-	// 	GlobalConfig: *config.NewGlobalConfig(chartname),
-	// 	FileConfigMap: map[string]config.FileConfig{
-	// 		filepath.Join(".", "test", "testdata", "generated", "mt-controller-manager-deployment.yaml"): {
-	// 			config.XPath("spec.type"): {
-	// 				Strategy: config.XPathStrategyInline,
-	// 				Value:    "Values.xxx",
-	// 			},
-	// 			config.XPath("spec.selector"): {
-	// 				Strategy: config.XPathStrategyNewline,
-	// 				Value:    "Values.yyy",
-	// 			},
-	// 			config.XPath("spec.ports"): {
-	// 				Strategy: config.XPathStrategyControlWith,
-	// 				Value:    "Values.zzz",
-	// 			},
-	// 		},
-	// 	},
-	// }
-
-	// p := yaml.NewYAMLProcessor(logger, file, config)
-	// err = p.Process()
-	// if err != nil {
-	// 	logger.Errorf("Error processing YAML: %s", err)
-	// 	return err
-	// }
 	return nil
-
-	// TODO:
-
 }

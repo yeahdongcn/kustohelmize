@@ -13,8 +13,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
+	"github.com/yeahdongcn/kustohelmize/pkg/util"
 	"gopkg.in/yaml.v1"
 )
+
+type context struct {
+}
 
 type YAMLProcessor struct {
 	logger            logr.Logger
@@ -36,7 +40,7 @@ func (p *YAMLProcessor) Process() error {
 	for filename, fileConfig := range p.config.FileConfigMap {
 		z := filepath.Base(filename)
 		dest := filepath.Join(p.destDir, z)
-		if strings.HasSuffix(z, "-crd.yaml") {
+		if util.IsCustomResourceDefinition(z) {
 			err := exec.Command("cp", "-f", filename, dest).Run()
 			if err != nil {
 				p.logger.Error(err, "Failed to copy file", "source", filename, "dest", dest)
@@ -216,13 +220,13 @@ func (p *YAMLProcessor) walk(v reflect.Value, nindent int, root config.XPath, fr
 			}
 		}
 	default:
+		// spec.template.spec.nodeSelector: Invalid type. Expected: [string,null], given: boolean
 		if v.Kind() == reflect.Invalid {
 			fmt.Fprintln(p.out, "null")
 			return
 		}
 		str := v.String()
 		p.logger.V(10).Info("Handling default", "root", root, "str", str)
-		// spec.template.spec.nodeSelector: Invalid type. Expected: [string,null], given: boolean
 		if str == "true" || str == "false" || str == "" {
 			fmt.Fprintln(p.out, fmt.Sprintf("\"%s\"", v))
 		} else if strings.Contains(str, "\n") {
