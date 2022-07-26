@@ -18,6 +18,7 @@ const (
 
 type XPathConfig struct {
 	Strategy XPathStrategy `yaml:"strategy"`
+	Key      string        `yaml:"key"`
 	Value    string        `yaml:"value"`
 }
 
@@ -43,11 +44,11 @@ func NewGlobalConfig(chartname string) *Config {
 	return &Config{
 		"metadata.name": {
 			Strategy: XPathStrategyInline,
-			Value:    fmt.Sprintf(chart.NameFormat, chartname),
+			Key:      fmt.Sprintf(chart.NameFormat, chartname),
 		},
 		"metadata.labels": {
 			Strategy: XPathStrategyNewline,
-			Value:    fmt.Sprintf(chart.CommonLabelsFormat, chartname),
+			Key:      fmt.Sprintf(chart.CommonLabelsFormat, chartname),
 		},
 	}
 }

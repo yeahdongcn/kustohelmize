@@ -15,7 +15,7 @@ import (
 	"github.com/yeahdongcn/kustohelmize/pkg/template"
 	"github.com/yeahdongcn/kustohelmize/pkg/util"
 	"github.com/yeahdongcn/kustohelmize/pkg/value"
-	goyaml "gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v1"
 	"helm.sh/helm/v3/cmd/helm/require"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
@@ -123,7 +123,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 			return nil, err
 		}
 		config := &config.ChartConfig{}
-		err = goyaml.Unmarshal(out, config)
+		err = yaml.Unmarshal(out, config)
 		if err != nil {
 			o.logger.Error(err, "Error unmarshalling config file", "path", path)
 			return nil, err
@@ -146,7 +146,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 		}
 	}
 
-	output, err := goyaml.Marshal(config)
+	output, err := yaml.Marshal(config)
 	if err != nil {
 		o.logger.Error(err, "Error marshalling config file")
 		return nil, err
@@ -199,6 +199,10 @@ func (o *createOptions) run(out io.Writer) error {
 		filepath.Join(chartdir, chartutil.ServiceAccountName),
 		filepath.Join(chartdir, chartutil.HorizontalPodAutoscalerName),
 		filepath.Join(chartdir, chartutil.NotesName),
+
+		filepath.Join(chartdir, chartutil.TestConnectionName),
+
+		filepath.Join(chartdir, chartutil.ValuesfileName),
 	}
 	for _, file := range files {
 		o.logger.V(10).Info("Removing file", "name", file)
@@ -210,6 +214,7 @@ func (o *createOptions) run(out io.Writer) error {
 	err = v.Process()
 	if err != nil {
 		o.logger.Error(err, "Error processing values")
+		return err
 	}
 
 	p := template.NewProcessor(o.logger.WithName("template"), config, filepath.Join(chartdir, chartutil.TemplatesDir))

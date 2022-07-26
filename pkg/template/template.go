@@ -128,9 +128,9 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 
 		var value string
 		if isGlobalConfig {
-			value = fmt.Sprintf(globalSingleLineValueFormat, xpathConfig.Value)
+			value = fmt.Sprintf(globalSingleLineValueFormat, xpathConfig.Key)
 		} else {
-			value = fmt.Sprintf(perFileSingleLineValueFormat, p.context.prefix, xpathConfig.Value)
+			value = fmt.Sprintf(perFileSingleLineValueFormat, p.context.prefix, xpathConfig.Key)
 		}
 		fmt.Fprintln(p.context.out, value)
 		return true
@@ -142,9 +142,9 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 
 		var value string
 		if isGlobalConfig {
-			value = fmt.Sprintf(globalMultilineValueFormat, xpathConfig.Value, (nindent+1)*2)
+			value = fmt.Sprintf(globalMultilineValueFormat, xpathConfig.Key, (nindent+1)*2)
 		} else {
-			value = fmt.Sprintf(perFileMultilineValueFormat, p.context.prefix, xpathConfig.Value, (nindent+1)*2)
+			value = fmt.Sprintf(perFileMultilineValueFormat, p.context.prefix, xpathConfig.Key, (nindent+1)*2)
 		}
 
 		fmt.Fprintln(p.context.out, indent(value, nindent+1))
@@ -154,7 +154,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 		// tolerations:
 		//   {{- toYaml . | nindent 8 }}
 		// {{- end }}
-		mixed := fmt.Sprintf(withMixedFormat, xpathConfig.Value, v, (nindent+1)*2)
+		mixed := fmt.Sprintf(withMixedFormat, xpathConfig.Key, v, (nindent+1)*2)
 		fmt.Fprintln(p.context.out, indent(mixed, nindent))
 		return true
 	case config.XPathStrategyControlIf:

@@ -3,6 +3,8 @@ package util
 import (
 	"path/filepath"
 	"strings"
+
+	"github.com/iancoleman/strcase"
 )
 
 func IsCustomResourceDefinition(path string) bool {
@@ -10,5 +12,5 @@ func IsCustomResourceDefinition(path string) bool {
 }
 
 func FilenameWithoutExt(path string) string {
-	return strings.TrimSuffix(path, filepath.Ext(path))
+	return strcase.ToLowerCamel(strings.TrimSuffix(path, filepath.Ext(path)))
 }
