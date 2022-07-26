@@ -5,18 +5,20 @@ import (
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 )
 
-type ValueProcessor struct {
-	logger logr.Logger
-	config *config.Config
+type Processor struct {
+	logger  logr.Logger
+	config  *config.ChartConfig
+	destDir string
 }
 
-func NewValueProcessor(logger logr.Logger, config *config.Config) *ValueProcessor {
-	return &ValueProcessor{
-		logger: logger,
-		config: config,
+func NewProcessor(logger logr.Logger, config *config.ChartConfig, destDir string) *Processor {
+	return &Processor{
+		logger:  logger,
+		config:  config,
+		destDir: destDir,
 	}
 }
 
-func (p *ValueProcessor) Process() error {
+func (p *Processor) Process() error {
 	return nil
 }

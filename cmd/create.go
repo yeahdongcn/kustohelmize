@@ -12,9 +12,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
+	"github.com/yeahdongcn/kustohelmize/pkg/template"
 	"github.com/yeahdongcn/kustohelmize/pkg/util"
 	"github.com/yeahdongcn/kustohelmize/pkg/value"
-	"github.com/yeahdongcn/kustohelmize/pkg/yaml"
 	goyaml "gopkg.in/yaml.v1"
 	"helm.sh/helm/v3/cmd/helm/require"
 	"helm.sh/helm/v3/pkg/chart"
@@ -111,7 +111,7 @@ func (o *createOptions) configPath() string {
 	return filepath.Join(filepath.Dir(o.name), fmt.Sprintf("%s.config", o.chartname()))
 }
 
-func (o *createOptions) getConfig() (*cfg.Config, error) {
+func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	path := o.configPath()
 	_, err := os.Stat(path)
 	if err == nil {
@@ -122,7 +122,7 @@ func (o *createOptions) getConfig() (*cfg.Config, error) {
 			o.logger.Error(err, "Error reading config file", "path", path)
 			return nil, err
 		}
-		config := &config.Config{}
+		config := &config.ChartConfig{}
 		err = goyaml.Unmarshal(out, config)
 		if err != nil {
 			o.logger.Error(err, "Error unmarshalling config file", "path", path)
@@ -132,16 +132,16 @@ func (o *createOptions) getConfig() (*cfg.Config, error) {
 	}
 
 	chartname := o.chartname()
-	config := &cfg.Config{
+	config := &cfg.ChartConfig{
 		Chartname:     chartname,
 		GlobalConfig:  *cfg.NewGlobalConfig(chartname),
-		FileConfigMap: map[string]cfg.FileConfig{},
+		PerFileConfig: map[string]cfg.Config{},
 	}
 
 	c, err := os.ReadDir(o.intermediateDir)
 	for _, entry := range c {
 		if !util.IsCustomResourceDefinition(entry.Name()) {
-			config.FileConfigMap[filepath.Join(o.intermediateDir, entry.Name())] = cfg.FileConfig{}
+			config.PerFileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
 			o.logger.V(10).Info("Split YAML file", "name", entry.Name())
 		}
 	}
@@ -206,16 +206,16 @@ func (o *createOptions) run(out io.Writer) error {
 		os.Remove(file)
 	}
 
-	v := value.NewValueProcessor(o.logger.WithName("value"), config)
+	v := value.NewProcessor(o.logger.WithName("value"), config, chartdir)
 	err = v.Process()
 	if err != nil {
 		o.logger.Error(err, "Error processing values")
 	}
 
-	p := yaml.NewYAMLProcessor(o.logger.WithName("template"), filepath.Join(chartdir, chartutil.TemplatesDir), config)
+	p := template.NewProcessor(o.logger.WithName("template"), config, filepath.Join(chartdir, chartutil.TemplatesDir))
 	err = p.Process()
 	if err != nil {
-		o.logger.Error(err, "Error processing YAML")
+		o.logger.Error(err, "Error processing templates")
 		return err
 	}
 

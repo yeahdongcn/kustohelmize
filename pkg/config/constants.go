@@ -1,5 +1,6 @@
 package config
 
 const (
-	XPathRoot = ""
+	XPathRoot           = ""
+	XPathSliceIndexNone = -1
 )

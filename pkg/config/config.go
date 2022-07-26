@@ -27,19 +27,20 @@ func (xpath XPath) IsRoot() bool {
 	return xpath == XPathRoot
 }
 
-func (xpath XPath) NewChild(s string) XPath {
+func (xpath XPath) NewChild(s string, sliceIndex int) XPath {
 	if xpath.IsRoot() {
 		return XPath(s)
 	}
-	return XPath(fmt.Sprintf("%s.%s", xpath, s))
+	if sliceIndex == XPathSliceIndexNone {
+		return XPath(fmt.Sprintf("%s.%s", xpath, s))
+	}
+	return XPath(fmt.Sprintf("%s[%d].%s", xpath, sliceIndex, s))
 }
 
-type FileConfig map[XPath]XPathConfig
+type Config map[XPath]XPathConfig
 
-type GlobalConfig FileConfig
-
-func NewGlobalConfig(chartname string) *GlobalConfig {
-	return &GlobalConfig{
+func NewGlobalConfig(chartname string) *Config {
+	return &Config{
 		"metadata.name": {
 			Strategy: XPathStrategyInline,
 			Value:    fmt.Sprintf(chart.NameFormat, chartname),
@@ -51,8 +52,8 @@ func NewGlobalConfig(chartname string) *GlobalConfig {
 	}
 }
 
-type Config struct {
-	Chartname     string                `yaml:"chartname"`
-	GlobalConfig  GlobalConfig          `yaml:"globalConfig"`
-	FileConfigMap map[string]FileConfig `yaml:"fileConfigMap"`
+type ChartConfig struct {
+	Chartname     string            `yaml:"chartname"`
+	GlobalConfig  Config            `yaml:"globalConfig"`
+	PerFileConfig map[string]Config `yaml:"fileConfigMap"`
 }

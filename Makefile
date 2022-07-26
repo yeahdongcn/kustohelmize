@@ -23,8 +23,8 @@ build:
 test: build
 	./bin/kustohelmize create --from=test/testdata/mt-gpu-operator.yaml mychart
 # https://github.com/github/super-linter/issues/1601
-	@for f in $(shell ls -d mychart-generated/*.yaml); do kubeval $${f} --ignore-missing-schemas; done
-	helm lint ./mychart
+#	@for f in $(shell ls -d mychart-generated/*.yaml); do kubeval $${f} --ignore-missing-schemas; done
+#	helm lint ./mychart
 
 KUBERNETES-SPLIT-YAML = $(shell pwd)/bin/kubernetes-split-yaml
 .PHONY: kubernetes-split-yaml
