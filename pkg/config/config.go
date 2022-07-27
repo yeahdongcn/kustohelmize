@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
 )
@@ -17,9 +18,10 @@ const (
 )
 
 type XPathConfig struct {
-	Strategy XPathStrategy `yaml:"strategy"`
-	Key      string        `yaml:"key"`
-	Value    string        `yaml:"value,omitempty"`
+	Strategy     XPathStrategy `yaml:"strategy"`
+	Key          string        `yaml:"key"`
+	Value        string        `yaml:"value,omitempty"`
+	DefaultValue string        `yaml:"defaultValue,omitempty"`
 }
 
 type XPath string
@@ -40,7 +42,7 @@ func (xpath XPath) NewChild(s string, sliceIndex int) XPath {
 
 type Config map[XPath]XPathConfig
 
-func NewGlobalConfig(chartname string) *Config {
+func newGlobalConfig(chartname string) *Config {
 	return &Config{
 		"metadata.name": {
 			Strategy: XPathStrategyInline,
@@ -55,7 +57,29 @@ func NewGlobalConfig(chartname string) *Config {
 
 type ChartConfig struct {
 	Chartname    string                 `yaml:"chartname"`
+	SharedValues map[string]interface{} `yaml:"sharedValues"`
 	GlobalConfig Config                 `yaml:"globalConfig"`
 	FileConfig   map[string]Config      `yaml:"fileConfig"`
-	SharedValues map[string]interface{} `yaml:"sharedValues"`
+}
+
+func NewChartConfig(chartname string) *ChartConfig {
+	config := &ChartConfig{
+		Chartname:    chartname,
+		SharedValues: map[string]interface{}{},
+		GlobalConfig: *newGlobalConfig(chartname),
+		FileConfig:   map[string]Config{},
+	}
+	return config
+}
+
+func (c *ChartConfig) GetKeyFromSharedValues(xc *XPathConfig) (string, bool) {
+	key := xc.Key
+	if strings.HasPrefix(key, "sharedValues") {
+		substrings := strings.Split(key, ".")
+		if len(substrings) <= 1 {
+			panic("Invalid key")
+		}
+		key = substrings[1]
+	}
+	return key, c.SharedValues[key] != nil
 }

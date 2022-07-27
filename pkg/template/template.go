@@ -122,65 +122,56 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 	}
 	switch xpathConfig.Strategy {
 	case config.XPathStrategyInline:
-		// name: {{ include "mychart.fullname" . }}
 		key := fmt.Sprintf(singleLineKeyFormat, v)
 		fmt.Fprint(p.context.out, indent(key, nindent))
 
 		var value string
 		if isGlobalConfig {
+			// name: {{ include "mychart.fullname" . }}
 			value = fmt.Sprintf(globalSingleLineValueFormat, xpathConfig.Key)
 		} else {
-			key := xpathConfig.Key
-			if strings.Contains(key, "perChartValues") {
-				key = strings.Split(key, ".")[1]
-			}
-			if p.config.SharedValues[key] != nil {
-				value = fmt.Sprintf(perChartSingleLineValueFormat, key)
+			key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
+			if shared {
+				value = fmt.Sprintf(sharedSingleLineValueFormat, key)
 			} else {
-				value = fmt.Sprintf(perFileSingleLineValueFormat, p.context.prefix, key)
+				value = fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, key)
 			}
 		}
 		fmt.Fprintln(p.context.out, value)
 		return true
 	case config.XPathStrategyNewline:
-		// selector:
-		//   {{- include "mychart.selectorLabels" . | nindent 4 }}
 		key := fmt.Sprintf(multilineKeyFormat, v)
 		fmt.Fprintln(p.context.out, indent(key, nindent))
 
 		var value string
 		if isGlobalConfig {
+			// selector:
+			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
 			value = fmt.Sprintf(globalMultilineValueFormat, xpathConfig.Key, (nindent+1)*2)
 		} else {
-			key := xpathConfig.Key
-			if strings.Contains(key, "perChartValues") {
-				key = strings.Split(key, ".")[1]
-			}
-			if p.config.SharedValues[key] != nil {
-				value = fmt.Sprintf(perChartMultilineValueFormat, key, (nindent+1)*2)
+			key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
+			if shared {
+				value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
 			} else {
-				value = fmt.Sprintf(perFileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
+				value = fmt.Sprintf(fileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
 			}
 		}
 		fmt.Fprintln(p.context.out, indent(value, nindent+1))
 		return true
 	case config.XPathStrategyControlWith:
-		// {{- with .Values.tolerations }}
-		// tolerations:
-		//   {{- toYaml . | nindent 8 }}
-		// {{- end }}
 		var mixed string
 		if isGlobalConfig {
 			mixed = fmt.Sprintf(globalWithMixedFormat, xpathConfig.Key, v, (nindent+1)*2)
 		} else {
-			key := xpathConfig.Key
-			if strings.Contains(key, "perChartValues") {
-				key = strings.Split(key, ".")[1]
-			}
-			if p.config.SharedValues[key] != nil {
-				mixed = fmt.Sprintf(perChartWithMixedFormat, key, v, (nindent+1)*2)
+			key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
+			if shared {
+				// {{- with .Values.tolerations }}
+				// tolerations:
+				//   {{- toYaml . | nindent 8 }}
+				// {{- end }}
+				mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
 			} else {
-				mixed = fmt.Sprintf(perFileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
+				mixed = fmt.Sprintf(fileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
 			}
 		}
 		fmt.Fprintln(p.context.out, indent(mixed, nindent))

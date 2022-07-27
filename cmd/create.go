@@ -132,12 +132,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	}
 
 	chartname := o.chartname()
-	config := &cfg.ChartConfig{
-		Chartname:    chartname,
-		GlobalConfig: *cfg.NewGlobalConfig(chartname),
-		FileConfig:   map[string]cfg.Config{},
-		SharedValues: map[string]interface{}{},
-	}
+	config := cfg.NewChartConfig(chartname)
 
 	c, err := os.ReadDir(o.intermediateDir)
 	for _, entry := range c {

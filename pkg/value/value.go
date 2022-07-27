@@ -1,6 +1,7 @@
 package value
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -39,7 +40,7 @@ func (p *Processor) Process() error {
 	if err != nil {
 		return err
 	}
-	_, err = file.Write(out)
+	_, err = file.WriteString(fmt.Sprintf("%s\n", string(out)))
 	if err != nil {
 		return err
 	}
@@ -54,18 +55,19 @@ func (p *Processor) Process() error {
 
 		for _, v := range fileConfig {
 			newroot := root.(map[string]interface{})
-			components := strings.Split(v.Key, ".")
-			for i, com := range components {
-				if i == 0 && com == "perChartValues" {
+			substrings := strings.Split(v.Key, ".")
+			for i, substring := range substrings {
+				if i == 0 && substring == "sharedValues" {
 					break
 				}
-				if newroot[com] == nil {
-					newroot[com] = make(map[string]interface{})
+				if newroot[substring] == nil {
+					newroot[substring] = make(map[string]interface{})
 				}
-				if i < len(components)-1 {
-					newroot = newroot[com].(map[string]interface{})
+				if i < len(substrings)-1 {
+					newroot = newroot[substring].(map[string]interface{})
 				} else {
-					newroot[com] = v.Value
+					p.logger.Info("Setting value", "key", v.Key, "substring", substring, "value", v.Value)
+					newroot[substring] = v.Value
 				}
 			}
 		}
