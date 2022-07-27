@@ -54,7 +54,8 @@ func NewGlobalConfig(chartname string) *Config {
 }
 
 type ChartConfig struct {
-	Chartname     string            `yaml:"chartname"`
-	GlobalConfig  Config            `yaml:"globalConfig"`
-	PerFileConfig map[string]Config `yaml:"perFileConfig"`
+	Chartname    string                 `yaml:"chartname"`
+	GlobalConfig Config                 `yaml:"globalConfig"`
+	FileConfig   map[string]Config      `yaml:"fileConfig"`
+	SharedValues map[string]interface{} `yaml:"sharedValues"`
 }

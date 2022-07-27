@@ -41,7 +41,7 @@ func NewProcessor(logger logr.Logger, config *config.ChartConfig, destDir string
 }
 
 func (p *Processor) Process() error {
-	for filename, fileConfig := range p.config.PerFileConfig {
+	for filename, fileConfig := range p.config.FileConfig {
 		z := filepath.Base(filename)
 		// TODO: Remove this
 		if !strings.Contains(z, "mt-controller-manager-deployment.yaml") {
@@ -130,7 +130,15 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 		if isGlobalConfig {
 			value = fmt.Sprintf(globalSingleLineValueFormat, xpathConfig.Key)
 		} else {
-			value = fmt.Sprintf(perFileSingleLineValueFormat, p.context.prefix, xpathConfig.Key)
+			key := xpathConfig.Key
+			if strings.Contains(key, "perChartValues") {
+				key = strings.Split(key, ".")[1]
+			}
+			if p.config.SharedValues[key] != nil {
+				value = fmt.Sprintf(perChartSingleLineValueFormat, key)
+			} else {
+				value = fmt.Sprintf(perFileSingleLineValueFormat, p.context.prefix, key)
+			}
 		}
 		fmt.Fprintln(p.context.out, value)
 		return true
@@ -144,9 +152,16 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 		if isGlobalConfig {
 			value = fmt.Sprintf(globalMultilineValueFormat, xpathConfig.Key, (nindent+1)*2)
 		} else {
-			value = fmt.Sprintf(perFileMultilineValueFormat, p.context.prefix, xpathConfig.Key, (nindent+1)*2)
+			key := xpathConfig.Key
+			if strings.Contains(key, "perChartValues") {
+				key = strings.Split(key, ".")[1]
+			}
+			if p.config.SharedValues[key] != nil {
+				value = fmt.Sprintf(perChartMultilineValueFormat, key, (nindent+1)*2)
+			} else {
+				value = fmt.Sprintf(perFileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
+			}
 		}
-
 		fmt.Fprintln(p.context.out, indent(value, nindent+1))
 		return true
 	case config.XPathStrategyControlWith:
@@ -154,7 +169,20 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 		// tolerations:
 		//   {{- toYaml . | nindent 8 }}
 		// {{- end }}
-		mixed := fmt.Sprintf(withMixedFormat, xpathConfig.Key, v, (nindent+1)*2)
+		var mixed string
+		if isGlobalConfig {
+			mixed = fmt.Sprintf(globalWithMixedFormat, xpathConfig.Key, v, (nindent+1)*2)
+		} else {
+			key := xpathConfig.Key
+			if strings.Contains(key, "perChartValues") {
+				key = strings.Split(key, ".")[1]
+			}
+			if p.config.SharedValues[key] != nil {
+				mixed = fmt.Sprintf(perChartWithMixedFormat, key, v, (nindent+1)*2)
+			} else {
+				mixed = fmt.Sprintf(perFileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
+			}
+		}
 		fmt.Fprintln(p.context.out, indent(mixed, nindent))
 		return true
 	case config.XPathStrategyControlIf:

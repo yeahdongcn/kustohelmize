@@ -133,15 +133,16 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 
 	chartname := o.chartname()
 	config := &cfg.ChartConfig{
-		Chartname:     chartname,
-		GlobalConfig:  *cfg.NewGlobalConfig(chartname),
-		PerFileConfig: map[string]cfg.Config{},
+		Chartname:    chartname,
+		GlobalConfig: *cfg.NewGlobalConfig(chartname),
+		FileConfig:   map[string]cfg.Config{},
+		SharedValues: map[string]interface{}{},
 	}
 
 	c, err := os.ReadDir(o.intermediateDir)
 	for _, entry := range c {
 		if !util.IsCustomResourceDefinition(entry.Name()) {
-			config.PerFileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
+			config.FileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
 			o.logger.V(10).Info("Split YAML file", "name", entry.Name())
 		}
 	}
