@@ -42,13 +42,9 @@ func NewProcessor(logger logr.Logger, config *config.ChartConfig, destDir string
 
 func (p *Processor) Process() error {
 	for filename, fileConfig := range p.config.FileConfig {
-		z := filepath.Base(filename)
-		// TODO: Remove this
-		if !strings.Contains(z, "mt-controller-manager-deployment.yaml") {
-			continue
-		}
-		dest := filepath.Join(p.destDir, z)
-		if util.IsCustomResourceDefinition(z) {
+		name := filepath.Base(filename)
+		dest := filepath.Join(p.destDir, name)
+		if util.IsCustomResourceDefinition(name) {
 			err := exec.Command("cp", "-f", filename, dest).Run()
 			if err != nil {
 				p.logger.Error(err, "Failed to copy file", "source", filename, "dest", dest)
@@ -64,13 +60,13 @@ func (p *Processor) Process() error {
 		}
 		defer file.Close()
 
-		b, err := ioutil.ReadFile(filename)
+		bs, err := ioutil.ReadFile(filename)
 		if err != nil {
 			p.logger.Error(err, "Error reading YAML", "filename", filename)
 			return err
 		}
-		data := make(map[string]interface{})
-		err = yaml.Unmarshal(b, &data)
+		data := config.GenericMap{}
+		err = yaml.Unmarshal(bs, &data)
 		if err != nil {
 			p.logger.Error(err, "Error unmarshalling YAML", "filename", filename)
 			return err
@@ -78,7 +74,7 @@ func (p *Processor) Process() error {
 
 		p.context = context{
 			out:        file,
-			prefix:     util.FilenameWithoutExt(z),
+			prefix:     util.LowerCamelFilenameWithoutExt(name),
 			fileConfig: fileConfig,
 		}
 		d := reflect.ValueOf(data)
@@ -89,10 +85,10 @@ func (p *Processor) Process() error {
 }
 
 func indent(s string, n int) string {
-	return xindent(s, n, false)
+	return indentsFromSlice(s, n, false)
 }
 
-func xindent(s string, n int, fromSlice bool) string {
+func indentsFromSlice(s string, n int, fromSlice bool) string {
 	if n < 0 {
 		n = 0
 	}
@@ -112,14 +108,25 @@ func xindent(s string, n int, fromSlice bool) string {
 	return indented
 }
 
-func (p *Processor) handleSlice() {
-
+func (p *Processor) processSlice(v reflect.Value, nindent int) {
+	for i := 0; i < v.Len(); i++ {
+		item := util.ReflectValue(v.Index(i))
+		str := item.String()
+		if str == "" {
+			fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- \"%s\"", item), nindent))
+		} else if str == "*" {
+			fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- '%s'", item), nindent))
+		} else {
+			fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- %s", item), nindent))
+		}
+	}
 }
 
-func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig config.XPathConfig, isGlobalConfig bool) bool {
-	if (xpathConfig == config.XPathConfig{}) {
+func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs config.XPathConfigs, isGlobalConfig bool) bool {
+	if len(xpathConfigs) == 0 {
 		return false
 	}
+	xpathConfig := xpathConfigs[0]
 	switch xpathConfig.Strategy {
 	case config.XPathStrategyInline:
 		key := fmt.Sprintf(singleLineKeyFormat, v)
@@ -134,7 +141,11 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfig co
 			if shared {
 				value = fmt.Sprintf(sharedSingleLineValueFormat, key)
 			} else {
-				value = fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, key)
+				for _, xpc := range xpathConfigs {
+					value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
+					value += ":"
+				}
+				value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, ":"))
 			}
 		}
 		fmt.Fprintln(p.context.out, value)
@@ -200,30 +211,24 @@ func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath)
 }
 
 func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceIndex int) {
-	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
-		v = v.Elem()
-	}
+	v = util.ReflectValue(v)
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
-		p.logger.V(10).Info("Handling slice", "root", root)
+		p.logger.V(10).Info("Processing slice", "root", root)
 
-		continueProcess := false
+		keepWalking := false
 		if v.Len() > 0 {
-			first := v.Index(0)
-			for first.Kind() == reflect.Ptr || first.Kind() == reflect.Interface {
-				first = first.Elem()
-			}
+			first := util.ReflectValue(v.Index(0))
 			if first.Kind() == reflect.Map {
-				continueProcess = true
-			}
-			if first.Kind() == reflect.Slice {
-				panic(10)
+				keepWalking = true
 			}
 		}
-		if !root.IsRoot() && !continueProcess {
+		if !root.IsRoot() && !keepWalking {
 			fmt.Fprintln(p.context.out)
 		}
-		if continueProcess {
+		if !keepWalking {
+			p.processSlice(v, nindent)
+		} else {
 			for i := 0; i < v.Len(); i++ {
 				if i == 0 {
 					fmt.Fprint(p.context.out, indent(slicePrefixFirstLineFormat, nindent))
@@ -232,43 +237,25 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 				}
 				p.walk(v.Index(i), nindent+1, root, i)
 			}
-		} else {
-			for i := 0; i < v.Len(); i++ {
-				x := v.Index(i)
-				if x.Kind() == reflect.Ptr || x.Kind() == reflect.Interface {
-					x = x.Elem()
-				}
-				str := x.String()
-				p.logger.Info(str)
-				if str == "" {
-					fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- \"%s\"", x), nindent))
-				} else if str == "*" {
-					fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- '%s'", x), nindent))
-				} else {
-					fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- %s", x), nindent))
-				}
-			}
 		}
 	case reflect.Map:
-		p.logger.V(10).Info("Handling map", "root", root)
+		p.logger.V(10).Info("Processing map", "root", root)
 
 		if !root.IsRoot() && sliceIndex == config.XPathSliceIndexNone {
 			fmt.Fprintln(p.context.out)
 		}
-		xyz := sliceIndex != config.XPathSliceIndexNone
+		hasSliceIndex := sliceIndex != config.XPathSliceIndexNone
 		for _, k := range v.MapKeys() {
-			mapKey := k.String()
-			if k.Kind() == reflect.Ptr || k.Kind() == reflect.Interface {
-				mapKey = k.Elem().String()
-			}
+			mapKey := util.ReflectValue(k).String()
 			xpath := root.NewChild(mapKey, sliceIndex)
 			if !p.processMap(k, nindent, xpath) {
 				key := fmt.Sprintf(singleLineKeyFormat, k)
-				if xyz {
-					fmt.Fprint(p.context.out, xindent(key, nindent, true))
-					xyz = false
+				if hasSliceIndex {
+					fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, true))
+					// XXX: For the first element only.
+					hasSliceIndex = false
 				} else {
-					fmt.Fprint(p.context.out, xindent(key, nindent, false))
+					fmt.Fprint(p.context.out, indent(key, nindent))
 				}
 				p.walk(v.MapIndex(k), nindent+1, xpath, -1)
 			}
@@ -280,7 +267,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			return
 		}
 		str := v.String()
-		p.logger.V(10).Info("Handling default", "root", root, "str", str)
+		p.logger.V(10).Info("Processing others", "root", root, "str", str)
 		if str == "true" || str == "false" {
 			fmt.Fprintln(p.context.out, fmt.Sprintf("\"%s\"", v))
 		} else if strings.Contains(str, "\n") {

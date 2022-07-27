@@ -11,6 +11,6 @@ func IsCustomResourceDefinition(path string) bool {
 	return strings.HasSuffix(path, "-crd.yaml")
 }
 
-func FilenameWithoutExt(path string) string {
+func LowerCamelFilenameWithoutExt(path string) string {
 	return strcase.ToLowerCamel(strings.TrimSuffix(path, filepath.Ext(path)))
 }
