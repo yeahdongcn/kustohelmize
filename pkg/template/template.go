@@ -125,6 +125,7 @@ func (p *Processor) processSlice(v reflect.Value, nindent int) {
 	}
 }
 
+// TODO: THIS FUNCTION NEEDS TO BE REFACTORED.
 func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs config.XPathConfigs, isGlobalConfig bool, hasSliceIndex bool) bool {
 	if len(xpathConfigs) == 0 {
 		return false
@@ -138,8 +139,12 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		var value string
 		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 		if isGlobalConfig {
-			// name: {{ include "mychart.fullname" . }}
-			value = fmt.Sprintf(globalSingleLineValueFormat, key)
+			if shared {
+				value = fmt.Sprintf(sharedSingleLineValueFormat, key)
+			} else {
+				// name: {{ include "mychart.fullname" . }}
+				value = fmt.Sprintf(globalSingleLineValueFormat, key)
+			}
 		} else {
 			if shared {
 				value = fmt.Sprintf(sharedSingleLineValueFormat, key)
@@ -160,9 +165,13 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		var value string
 		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 		if isGlobalConfig {
-			// selector:
-			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
-			value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
+			if shared {
+				value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
+			} else {
+				// selector:
+				//   {{- include "mychart.selectorLabels" . | nindent 4 }}
+				value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
+			}
 		} else {
 			if shared {
 				value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
@@ -176,7 +185,15 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		var mixed string
 		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 		if isGlobalConfig {
-			mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
+			if shared {
+				// {{- with .Values.tolerations }}
+				// tolerations:
+				//   {{- toYaml . | nindent 8 }}
+				// {{- end }}
+				mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
+			} else {
+				mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
+			}
 		} else {
 			if shared {
 				// {{- with .Values.tolerations }}
