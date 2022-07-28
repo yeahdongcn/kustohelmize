@@ -42,7 +42,7 @@ Then a Helm chart with default configurations will be created for you. The direc
 
 ## Some TODOs
 
-[] Give our end-users a detailed example on how to use this tool.
+- [ ] Give our end-users a detailed example on how to use this tool.
 
 ## Some Notes
 
