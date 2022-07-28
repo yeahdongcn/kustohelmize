@@ -271,7 +271,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 		if str == "true" || str == "false" {
 			fmt.Fprintln(p.context.out, fmt.Sprintf("\"%s\"", v))
 		} else if strings.Contains(str, "\n") {
-			fmt.Fprintln(p.context.out, fmt.Sprintf("|\n%s", v))
+			fmt.Fprintln(p.context.out, fmt.Sprintf("|\n%s", indent(v.String(), nindent+1)))
 		} else {
 			fmt.Fprintln(p.context.out, v)
 		}

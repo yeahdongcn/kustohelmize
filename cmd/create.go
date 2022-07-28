@@ -13,7 +13,6 @@ import (
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/template"
-	"github.com/yeahdongcn/kustohelmize/pkg/util"
 	"github.com/yeahdongcn/kustohelmize/pkg/value"
 	"gopkg.in/yaml.v1"
 	"helm.sh/helm/v3/cmd/helm/require"
@@ -29,6 +28,7 @@ type createOptions struct {
 	kubernetesSplitYamlCommand   string
 	intermediateDir              string
 	enableIntermediateDirCleanup bool
+	config                       string
 
 	// From helm.
 	starter    string // --starter
@@ -76,8 +76,12 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	cmd.Flags().StringVarP(&o.from, "from", "f", "", "TODO")
 	cmd.MarkFlagRequired("from")
 	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
-	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "c", false, "TODO")
 	cmd.Flags().StringVarP(&o.intermediateDir, "intermediate-dir", "i", "", "TODO")
+	cmd.Flags().MarkHidden("intermediate-dir")
+	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "", false, "TODO")
+	cmd.Flags().MarkHidden("cleanup")
+	cmd.Flags().StringVarP(&o.config, "config", "c", "", "TODO")
+	cmd.Flags().MarkHidden("config")
 
 	cmd.Flags().StringVarP(&o.starter, "starter", "p", "", "the name or absolute path to Helm starter scaffold")
 	return cmd
@@ -136,10 +140,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 
 	c, err := os.ReadDir(o.intermediateDir)
 	for _, entry := range c {
-		if !util.IsCustomResourceDefinition(entry.Name()) {
-			config.FileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
-			o.logger.V(10).Info("Split YAML file", "name", entry.Name())
-		}
+		config.FileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
 	}
 
 	output, err := yaml.Marshal(config)
