@@ -1,11 +1,8 @@
 # kustohelmize
-<p align="center">
-    [![Go Report Card](https://goreportcard.com/badge/github.com/yeahdongcn/kustohelmize)](https://goreportcard.com/report/github.com/yeahdongcn/kustohelmize)
-    <a href="https://github.com/yeahdongcn/WFH/graphs/contributors" alt="Contributors">
-        <img src="https://img.shields.io/github/contributors/yeahdongcn/kustohelmize" /></a>
-    <img alt="GitHub last commit (branch)" src="https://img.shields.io/github/last-commit/yeahdongcn/kustohelmize/main">
-    <img alt="GitHub" src="https://img.shields.io/github/license/yeahdongcn/kustohelmize" />
-</p>
+[![Go Report Card](https://goreportcard.com/badge/github.com/yeahdongcn/kustohelmize)](https://goreportcard.com/report/github.com/yeahdongcn/kustohelmize)
+<a href="https://github.com/yeahdongcn/kustohelmize/graphs/contributors" alt="Contributors"><img src="https://img.shields.io/github/contributors/yeahdongcn/kustohelmize" /></a>
+<img alt="GitHub last commit (branch)" src="https://img.shields.io/github/last-commit/yeahdongcn/kustohelmize/main">
+<img alt="GitHub" src="https://img.shields.io/github/license/yeahdongcn/kustohelmize" />
 
 ## User scenario
 
