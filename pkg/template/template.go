@@ -42,13 +42,13 @@ func NewProcessor(logger logr.Logger, config *config.ChartConfig, destDir string
 }
 
 func (p *Processor) Process() error {
-	for filename, fileConfig := range p.config.FileConfig {
-		name := filepath.Base(filename)
-		dest := filepath.Join(p.destDir, name)
-		if util.IsCustomResourceDefinition(name) {
-			err := exec.Command("cp", "-f", filename, dest).Run()
+	for source, fileConfig := range p.config.FileConfig {
+		filename := filepath.Base(source)
+		dest := filepath.Join(p.destDir, filename)
+		if util.IsCustomResourceDefinition(filename) {
+			err := exec.Command("cp", "-f", source, dest).Run()
 			if err != nil {
-				p.logger.Error(err, "Failed to copy file", "source", filename, "dest", dest)
+				p.logger.Error(err, "Failed to copy file", "source", source, "dest", dest)
 				return err
 			}
 			continue
@@ -56,31 +56,31 @@ func (p *Processor) Process() error {
 
 		file, err := os.Create(dest)
 		if err != nil {
-			p.logger.Error(err, "Error creating file", "dest", dest)
+			p.logger.Error(err, "Error creating dest file", "dest", dest)
 			return err
 		}
 		defer file.Close()
 
 		_, err = file.WriteString(chart.Header)
 		if err != nil {
-			p.logger.Error(err, "Error writing file header", "dest", dest)
+			p.logger.Error(err, "Error writing dest file header", "dest", dest)
 		}
 
-		bs, err := ioutil.ReadFile(filename)
+		bs, err := ioutil.ReadFile(source)
 		if err != nil {
-			p.logger.Error(err, "Error reading YAML", "filename", filename)
+			p.logger.Error(err, "Error reading source YAML", "source", source)
 			return err
 		}
 		data := config.GenericMap{}
 		err = yaml.Unmarshal(bs, &data)
 		if err != nil {
-			p.logger.Error(err, "Error unmarshalling YAML", "filename", filename)
+			p.logger.Error(err, "Error unmarshalling source YAML", "source", source)
 			return err
 		}
 
 		p.context = context{
 			out:        file,
-			prefix:     util.LowerCamelFilenameWithoutExt(name),
+			prefix:     util.LowerCamelFilenameWithoutExt(filename),
 			fileConfig: fileConfig,
 		}
 		d := reflect.ValueOf(data)
@@ -95,9 +95,6 @@ func indent(s string, n int) string {
 }
 
 func indentsFromSlice(s string, n int, fromSlice bool) string {
-	if n < 0 {
-		n = 0
-	}
 	indents := strings.Repeat(defaultIndent, n)
 
 	indented := ""
@@ -139,11 +136,11 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
+		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 		if isGlobalConfig {
 			// name: {{ include "mychart.fullname" . }}
-			value = fmt.Sprintf(globalSingleLineValueFormat, xpathConfig.Key)
+			value = fmt.Sprintf(globalSingleLineValueFormat, key)
 		} else {
-			key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 			if shared {
 				value = fmt.Sprintf(sharedSingleLineValueFormat, key)
 			} else {
@@ -161,12 +158,12 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		fmt.Fprintln(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
+		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 		if isGlobalConfig {
 			// selector:
 			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
-			value = fmt.Sprintf(globalMultilineValueFormat, xpathConfig.Key, (nindent+1)*2)
+			value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
 		} else {
-			key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 			if shared {
 				value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
 			} else {
@@ -177,10 +174,10 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		return true
 	case config.XPathStrategyControlWith:
 		var mixed string
+		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 		if isGlobalConfig {
-			mixed = fmt.Sprintf(globalWithMixedFormat, xpathConfig.Key, v, (nindent+1)*2)
+			mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
 		} else {
-			key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
 			if shared {
 				// {{- with .Values.tolerations }}
 				// tolerations:
@@ -207,12 +204,14 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
 	// XXX: The priority of file config is greater than global config.
 	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], false, *hasSliceIndex) {
+		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false
 		}
 		return true
 	}
 	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], true, *hasSliceIndex) {
+		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false
 		}
