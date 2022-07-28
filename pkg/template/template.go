@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/yeahdongcn/kustohelmize/pkg/chart"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/util"
 	"gopkg.in/yaml.v1"
@@ -59,6 +60,11 @@ func (p *Processor) Process() error {
 			return err
 		}
 		defer file.Close()
+
+		_, err = file.WriteString(chart.Header)
+		if err != nil {
+			p.logger.Error(err, "Error writing file header", "dest", dest)
+		}
 
 		bs, err := ioutil.ReadFile(filename)
 		if err != nil {
