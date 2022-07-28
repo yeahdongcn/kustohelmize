@@ -128,7 +128,7 @@ func (p *Processor) processSlice(v reflect.Value, nindent int) {
 	}
 }
 
-func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs config.XPathConfigs, isGlobalConfig bool) bool {
+func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs config.XPathConfigs, isGlobalConfig bool, hasSliceIndex bool) bool {
 	if len(xpathConfigs) == 0 {
 		return false
 	}
@@ -136,7 +136,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 	switch xpathConfig.Strategy {
 	case config.XPathStrategyInline:
 		key := fmt.Sprintf(singleLineKeyFormat, v)
-		fmt.Fprint(p.context.out, indent(key, nindent))
+		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
 		if isGlobalConfig {
@@ -158,7 +158,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		return true
 	case config.XPathStrategyNewline:
 		key := fmt.Sprintf(multilineKeyFormat, v)
-		fmt.Fprintln(p.context.out, indent(key, nindent))
+		fmt.Fprintln(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
 		if isGlobalConfig {
@@ -191,7 +191,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 				mixed = fmt.Sprintf(fileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
 			}
 		}
-		fmt.Fprintln(p.context.out, indent(mixed, nindent))
+		fmt.Fprintln(p.context.out, indentsFromSlice(mixed, nindent, hasSliceIndex))
 		return true
 	case config.XPathStrategyControlIf:
 		p.logger.Info("ControlIf not implemented")
@@ -204,12 +204,18 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 	return false
 }
 
-func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath) bool {
+func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
 	// XXX: The priority of file config is greater than global config.
-	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], false) {
+	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], false, *hasSliceIndex) {
+		if *hasSliceIndex {
+			*hasSliceIndex = false
+		}
 		return true
 	}
-	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], true) {
+	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], true, *hasSliceIndex) {
+		if *hasSliceIndex {
+			*hasSliceIndex = false
+		}
 		return true
 	}
 
@@ -226,6 +232,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 		if v.Len() > 0 {
 			first := util.ReflectValue(v.Index(0))
 			if first.Kind() == reflect.Map {
+				// XXX: If this is a slice of maps, we need to process them separately.
 				keepWalking = true
 			}
 		}
@@ -254,7 +261,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 		for _, k := range v.MapKeys() {
 			mapKey := util.ReflectValue(k).String()
 			xpath := root.NewChild(mapKey, sliceIndex)
-			if !p.processMap(k, nindent, xpath) {
+			if !p.processMap(k, nindent, xpath, &hasSliceIndex) {
 				key := fmt.Sprintf(singleLineKeyFormat, k)
 				if hasSliceIndex {
 					fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, true))
@@ -263,7 +270,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 				} else {
 					fmt.Fprint(p.context.out, indent(key, nindent))
 				}
-				p.walk(v.MapIndex(k), nindent+1, xpath, -1)
+				p.walk(v.MapIndex(k), nindent+1, xpath, config.XPathSliceIndexNone)
 			}
 		}
 	default:
@@ -272,12 +279,12 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			fmt.Fprintln(p.context.out, "null")
 			return
 		}
-		str := v.String()
-		p.logger.V(10).Info("Processing others", "root", root, "str", str)
-		if str == "true" || str == "false" {
+		s := v.String()
+		p.logger.V(10).Info("Processing others", "root", root, "s", s)
+		if s == "true" || s == "false" {
 			fmt.Fprintln(p.context.out, fmt.Sprintf("\"%s\"", v))
-		} else if strings.Contains(str, "\n") {
-			fmt.Fprintln(p.context.out, fmt.Sprintf("|\n%s", indent(v.String(), nindent+1)))
+		} else if strings.Contains(s, "\n") {
+			fmt.Fprintln(p.context.out, fmt.Sprintf("|\n%s", indent(s, nindent+1)))
 		} else {
 			fmt.Fprintln(p.context.out, v)
 		}
