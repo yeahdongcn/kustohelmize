@@ -1,7 +1,6 @@
 # kustohelmize
 <p align="center">
-    <img alt="World peace" src="https://img.shields.io/badge/world-peace-brightgreen" />
-    <img alt="With love" src="https://img.shields.io/badge/with-love-red?logo=love" />
+    [![Go Report Card](https://goreportcard.com/badge/github.com/yeahdongcn/kustohelmize)](https://goreportcard.com/report/github.com/yeahdongcn/kustohelmize)
     <a href="https://github.com/yeahdongcn/WFH/graphs/contributors" alt="Contributors">
         <img src="https://img.shields.io/github/contributors/yeahdongcn/kustohelmize" /></a>
     <img alt="GitHub last commit (branch)" src="https://img.shields.io/github/last-commit/yeahdongcn/kustohelmize/main">
