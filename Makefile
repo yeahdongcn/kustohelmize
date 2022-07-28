@@ -13,9 +13,14 @@ help: ## Display this help.
 
 ##@ Build
 
+LDFLAGS    :=
+LDFLAGS    += -X github.com/yeahdongcn/kustohelmize/cmd.version=$(CLI_VERSION)
+LDFLAGS    += -X github.com/yeahdongcn/kustohelmize/cmd.gitCommit=$(GIT_COMMIT)
+LDFLAGS    += -X github.com/yeahdongcn/kustohelmize/cmd.gitTreeState=$(GIT_DIRTY)
+
 .PHONY: build
 build:
-	$(GO) build -o bin/kustohelmize $(CURDIR)/main.go
+	$(GO) build -o bin/kustohelmize -ldflags "$(LDFLAGS)" $(CURDIR)/main.go
 
 ##@ Test
 
