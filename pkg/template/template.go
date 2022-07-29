@@ -138,23 +138,17 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 
 		var value string
 		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		if isGlobalConfig {
-			if shared {
-				value = fmt.Sprintf(sharedSingleLineValueFormat, key)
-			} else {
-				// name: {{ include "mychart.fullname" . }}
-				value = fmt.Sprintf(globalSingleLineValueFormat, key)
-			}
+		if shared {
+			value = fmt.Sprintf(sharedSingleLineValueFormat, key)
+		} else if isGlobalConfig {
+			// name: {{ include "mychart.fullname" . }}
+			value = fmt.Sprintf(globalSingleLineValueFormat, key)
 		} else {
-			if shared {
-				value = fmt.Sprintf(sharedSingleLineValueFormat, key)
-			} else {
-				for _, xpc := range xpathConfigs {
-					value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
-					value += ":"
-				}
-				value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, ":"))
+			for _, xpc := range xpathConfigs {
+				value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
+				value += ":"
 			}
+			value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, ":"))
 		}
 		fmt.Fprintln(p.context.out, value)
 		return true
@@ -164,46 +158,30 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 
 		var value string
 		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		if isGlobalConfig {
-			if shared {
-				value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
-			} else {
-				// selector:
-				//   {{- include "mychart.selectorLabels" . | nindent 4 }}
-				value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
-			}
+		if shared {
+			value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
+		} else if isGlobalConfig {
+			// selector:
+			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
+			value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
 		} else {
-			if shared {
-				value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
-			} else {
-				value = fmt.Sprintf(fileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
-			}
+			value = fmt.Sprintf(fileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
 		}
 		fmt.Fprintln(p.context.out, indent(value, nindent+1))
 		return true
 	case config.XPathStrategyControlWith:
 		var mixed string
 		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		if isGlobalConfig {
-			if shared {
-				// {{- with .Values.tolerations }}
-				// tolerations:
-				//   {{- toYaml . | nindent 8 }}
-				// {{- end }}
-				mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
-			} else {
-				mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
-			}
+		if shared {
+			// {{- with .Values.tolerations }}
+			// tolerations:
+			//   {{- toYaml . | nindent 8 }}
+			// {{- end }}
+			mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
+		} else if isGlobalConfig {
+			mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
 		} else {
-			if shared {
-				// {{- with .Values.tolerations }}
-				// tolerations:
-				//   {{- toYaml . | nindent 8 }}
-				// {{- end }}
-				mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
-			} else {
-				mixed = fmt.Sprintf(fileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
-			}
+			mixed = fmt.Sprintf(fileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
 		}
 		fmt.Fprintln(p.context.out, indentsFromSlice(mixed, nindent, hasSliceIndex))
 		return true
@@ -298,9 +276,9 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 		s := v.String()
 		p.logger.V(10).Info("Processing others", "root", root, "s", s)
 		if s == "true" || s == "false" {
-			fmt.Fprintln(p.context.out, fmt.Sprintf("\"%s\"", v))
+			fmt.Fprintf(p.context.out, "\"%s\"\n", v)
 		} else if strings.Contains(s, "\n") {
-			fmt.Fprintln(p.context.out, fmt.Sprintf("|\n%s", indent(s, nindent+1)))
+			fmt.Fprintf(p.context.out, "|\n%s\n", indent(s, nindent+1))
 		} else {
 			fmt.Fprintln(p.context.out, v)
 		}
