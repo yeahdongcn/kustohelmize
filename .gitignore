@@ -25,3 +25,8 @@ test/testdata/
 mychart.config
 mychart-generated/
 mychart/
+
+# Examples
+examples/memcached-operator/*
+!examples/memcached-operator/Makefile
+!examples/memcached-operator/deployments
