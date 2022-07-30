@@ -6,4 +6,6 @@ const (
 	XPathSeparator      = "."
 
 	SharedValues = "sharedValues"
+
+	MultiValueSeparator = ":"
 )

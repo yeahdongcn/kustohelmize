@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
@@ -113,7 +114,13 @@ func (c *ChartConfig) Values() (string, error) {
 					if i < len(substrings)-1 {
 						configRoot = configRoot[substring].(GenericMap)
 					} else {
-						configRoot[substring] = c.Value
+						// XXX: Handle replicas: 1
+						n, err := strconv.Atoi(c.Value)
+						if err == nil {
+							configRoot[substring] = n
+						} else {
+							configRoot[substring] = c.Value
+						}
 					}
 				}
 			}

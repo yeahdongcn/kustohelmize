@@ -144,11 +144,15 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 			// name: {{ include "mychart.fullname" . }}
 			value = fmt.Sprintf(globalSingleLineValueFormat, key)
 		} else {
-			for _, xpc := range xpathConfigs {
-				value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
-				value += ":"
+			if len(xpathConfigs) > 1 {
+				for _, xpc := range xpathConfigs {
+					value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
+					value += config.MultiValueSeparator
+				}
+				value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
+			} else {
+				value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, key)
 			}
-			value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, ":"))
 		}
 		fmt.Fprintln(p.context.out, value)
 		return true
