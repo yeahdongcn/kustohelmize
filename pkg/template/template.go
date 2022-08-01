@@ -6,12 +6,12 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
 
 	"github.com/go-logr/logr"
+	"github.com/yeahdongcn/kustohelmize/internal/third_party/dep/fs"
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/util"
@@ -25,8 +25,7 @@ type context struct {
 }
 
 type Processor struct {
-	logger logr.Logger
-	// out               io.Writer
+	logger  logr.Logger
 	config  *config.ChartConfig
 	destDir string
 
@@ -46,9 +45,9 @@ func (p *Processor) Process() error {
 		filename := filepath.Base(source)
 		dest := filepath.Join(p.destDir, filename)
 		if util.IsCustomResourceDefinition(filename) {
-			err := exec.Command("cp", "-f", source, dest).Run()
+			err := fs.CopyFile(source, dest)
 			if err != nil {
-				p.logger.Error(err, "Failed to copy file", "source", source, "dest", dest)
+				p.logger.Error(err, "Error copying file", "source", source, "dest", dest)
 				return err
 			}
 			continue
@@ -144,6 +143,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 			// name: {{ include "mychart.fullname" . }}
 			value = fmt.Sprintf(globalSingleLineValueFormat, key)
 		} else {
+			// image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
 			if len(xpathConfigs) > 1 {
 				for _, xpc := range xpathConfigs {
 					value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
@@ -151,6 +151,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 				}
 				value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
 			} else {
+				// imagePullPolicy: {{ .Values.image.pullPolicy }}
 				value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, key)
 			}
 		}
