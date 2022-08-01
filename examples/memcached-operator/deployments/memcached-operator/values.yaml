@@ -2,7 +2,7 @@
 namespace: memcached-operator
 
 memcachedOperatorControllerManagerDeployment:
-  replicas: "1"
+  replicas: 1
 memcachedOperatorControllerManagerMetricsServiceSvc: {}
 memcachedOperatorControllerManagerSa: {}
 memcachedOperatorLeaderElectionRoleRole: {}

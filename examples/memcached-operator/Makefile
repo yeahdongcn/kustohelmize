@@ -151,6 +151,8 @@ deploy-dryrun: manifests kustomize ## Deploy controller to the K8s cluster speci
 .PHONY: helm
 helm: deploy-dryrun kustohelmize
 	$(KUSTOHELMIZE) create --from=config/memcached-operator.yaml deployments/memcached-operator
+# https://github.com/github/super-linter/issues/1601
+	@for f in $(shell ls -d deployments/memcached-operator-generated/*.yaml); do kubeval $${f} --ignore-missing-schemas; done
 	helm lint deployments/memcached-operator
 
 .PHONY: undeploy
@@ -196,10 +198,12 @@ kubernetes-split-yaml: $(KUBERNETES-SPLIT-YAML) ## Download kubernetes-split-yam
 $(KUBERNETES-SPLIT-YAML): $(LOCALBIN)
 	GOBIN=$(LOCALBIN) go install github.com/yeahdongcn/kubernetes-split-yaml@v0.4.0
 
+include ../../versions.mk
+
 .PHONY: kustohelmize
 kustohelmize: $(KUSTOHELMIZE) ## Download kustohelmize locally if necessary.
 $(KUSTOHELMIZE): $(LOCALBIN) kubernetes-split-yaml
-	GOBIN=$(LOCALBIN) go install github.com/yeahdongcn/kustohelmize@8bdee2dc4af333bec288f6c9c62d6bd55729c623
+	GOBIN=$(LOCALBIN) go install github.com/yeahdongcn/kustohelmize@$(GIT_COMMIT)
 
 .PHONY: bundle
 bundle: manifests kustomize ## Generate bundle manifests and metadata, then validate generated files.

@@ -42,7 +42,7 @@ $(KUBERNETES-SPLIT-YAML): $(LOCALBIN)
 .PHONY: kustohelmize
 kustohelmize: $(KUSTOHELMIZE) ## Download kustohelmize locally if necessary.
 $(KUSTOHELMIZE): $(LOCALBIN) kubernetes-split-yaml
-	GOBIN=$(LOCALBIN) go install github.com/yeahdongcn/kustohelmize@8bdee2dc4af333bec288f6c9c62d6bd55729c623
+	GOBIN=$(LOCALBIN) go install github.com/yeahdongcn/kustohelmize@latest
 ```
 
 Run `make helm` to create the Helm Chart. Then update `memcached-operator/deployments/memcached-operator.config` to add your own config. For example:

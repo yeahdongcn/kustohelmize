@@ -2,14 +2,10 @@
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata: 
-  namespace: {{ .Values.namespace }}
   name: memcached-operator-leader-election-role
+  namespace: {{ .Values.namespace }}
 rules:   
-  - apiGroups: 
-      - ""
-    resources: 
-      - configmaps
-    verbs: 
+  - verbs: 
       - get
       - list
       - watch
@@ -17,9 +13,11 @@ rules:
       - update
       - patch
       - delete
-  - apiGroups: 
-      - coordination.k8s.io
+    apiGroups: 
+      - ""
     resources: 
+      - configmaps
+  - resources: 
       - leases
     verbs: 
       - get
@@ -29,10 +27,12 @@ rules:
       - update
       - patch
       - delete
-  - verbs: 
-      - create
-      - patch
     apiGroups: 
+      - coordination.k8s.io
+  - apiGroups: 
       - ""
     resources: 
       - events
+    verbs: 
+      - create
+      - patch

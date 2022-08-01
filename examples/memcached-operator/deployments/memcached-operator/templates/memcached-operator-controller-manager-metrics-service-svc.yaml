@@ -7,10 +7,10 @@ metadata:
   name: memcached-operator-controller-manager-metrics-service
   namespace: {{ .Values.namespace }}
 spec: 
-  selector: 
-    control-plane: controller-manager
   ports:     
-    - protocol: TCP
-      targetPort: https
+    - targetPort: https
       name: https
       port: 8443
+      protocol: TCP
+  selector: 
+    control-plane: controller-manager
