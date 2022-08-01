@@ -3,68 +3,84 @@ package cmd
 import (
 	"fmt"
 	"io"
-	"strings"
+	"text/template"
 
 	"github.com/spf13/cobra"
 	"github.com/yeahdongcn/kustohelmize/cmd/require"
+	"github.com/yeahdongcn/kustohelmize/internal/version"
 )
 
-// version must be set by go build's -X main.version= option in the Makefile.
-var version = "unknown"
-
-// gitCommit will be the hash that the binary was built from
-// and will be populated by the Makefile
-var gitCommit = "unknown"
-
-// gitTreeState will be the state of the git tree that the binary was built from
-// and will be populated by the Makefile
-var gitTreeState = "unknown"
-
-// getVersionParts returns the different version components
-func getVersionParts() []string {
-	v := []string{"Version: " + version}
-
-	if gitCommit != "" {
-		v = append(v, "GitCommit: "+gitCommit)
-	}
-
-	if gitTreeState != "" {
-		v = append(v, "GitTreeState: "+gitTreeState)
-	}
-
-	return v
-}
-
-// GetVersionString returns the string representation of the version
-func getVersionString(more ...string) string {
-	v := append(getVersionParts(), more...)
-	return strings.Join(v, ", ")
-}
-
 const versionDesc = `
-Show the version for Kustohelmize.
+Show the version for Helm.
 
-This will print a representation the version of Kustohelmize.
+This will print a representation the version of Helm.
 The output will look something like this:
 
-Version: 1.0.0, GitCommit: a2864dacb7b21b1efdad9ceb063f69ade4010738, GitTreeState: dirty
+version.BuildInfo{Version:"v3.2.1", GitCommit:"fe51cd1e31e6a202cba7dead9552a6d418ded79a", GitTreeState:"clean", GoVersion:"go1.13.10"}
 
 - Version is the semantic version of the release.
 - GitCommit is the SHA for the commit that this version was built from.
 - GitTreeState is "clean" if there are no local code changes when this binary was
   built, and "dirty" if the binary was built from locally modified code.
+- GoVersion is the version of Go that was used to compile Helm.
+
+When using the --template flag the following properties are available to use in
+the template:
+
+- .Version contains the semantic version of Helm
+- .GitCommit is the git commit
+- .GitTreeState is the state of the git tree when Helm was built
+- .GoVersion contains the version of Go that Helm was compiled with
+
+For example, --template='Version: {{.Version}}' outputs 'Version: v3.2.1'.
 `
 
+type versionOptions struct {
+	short    bool
+	template string
+}
+
 func newVersionCmd(out io.Writer) *cobra.Command {
+	o := &versionOptions{}
+
 	cmd := &cobra.Command{
-		Use:   "version",
-		Short: "print the version information about Kustohelmize",
-		Long:  versionDesc,
-		Args:  require.NoArgs,
-		Run: func(cmd *cobra.Command, args []string) {
-			fmt.Fprintln(out, getVersionString())
+		Use:               "version",
+		Short:             "print the client version information",
+		Long:              versionDesc,
+		Args:              require.NoArgs,
+		ValidArgsFunction: noCompletions,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return o.run(out)
 		},
 	}
+	f := cmd.Flags()
+	f.BoolVar(&o.short, "short", false, "print the version number")
+	f.StringVar(&o.template, "template", "", "template for version string format")
+	f.BoolP("client", "c", true, "display client version information")
+	f.MarkHidden("client")
 
 	return cmd
+}
+
+func (o *versionOptions) run(out io.Writer) error {
+	if o.template != "" {
+		tt, err := template.New("_").Parse(o.template)
+		if err != nil {
+			return err
+		}
+		return tt.Execute(out, version.Get())
+	}
+	fmt.Fprintln(out, formatVersion(o.short))
+	return nil
+}
+
+func formatVersion(short bool) string {
+	v := version.Get()
+	if short {
+		if len(v.GitCommit) >= 7 {
+			return fmt.Sprintf("%s+g%s", v.Version, v.GitCommit[:7])
+		}
+		return version.GetVersion()
+	}
+	return fmt.Sprintf("%#v", v)
 }

@@ -13,14 +13,30 @@ help: ## Display this help.
 
 ##@ Build
 
-LDFLAGS    :=
-LDFLAGS    += -X github.com/yeahdongcn/kustohelmize/cmd.version=$(CLI_VERSION)
-LDFLAGS    += -X github.com/yeahdongcn/kustohelmize/cmd.gitCommit=$(GIT_COMMIT)
-LDFLAGS    += -X github.com/yeahdongcn/kustohelmize/cmd.gitTreeState=$(GIT_DIRTY)
+ifdef VERSION
+	BINARY_VERSION = $(VERSION)
+endif
+BINARY_VERSION ?= ${GIT_TAG}
+
+# Only set Version if building a tag or VERSION is set
+ifneq ($(BINARY_VERSION),)
+	LDFLAGS += -X helm.sh/helm/v3/internal/version.version=${BINARY_VERSION}
+endif
+
+VERSION_METADATA = unreleased
+# Clear the "unreleased" string in BuildMetadata
+ifneq ($(GIT_TAG),)
+	VERSION_METADATA =
+endif
+
+LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.metadata=${VERSION_METADATA}
+LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.gitCommit=${GIT_COMMIT}
+LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.gitTreeState=${GIT_DIRTY}
+LDFLAGS += $(EXT_LDFLAGS)
 
 .PHONY: build
 build:
-	$(GO) build -o bin/kustohelmize -ldflags "$(LDFLAGS)" $(CURDIR)/main.go
+	GO111MODULE=on CGO_ENABLED=0 $(GO) build -o bin/kustohelmize -ldflags '$(LDFLAGS)' $(CURDIR)/main.go
 
 ##@ Test
 
