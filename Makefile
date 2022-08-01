@@ -13,14 +13,14 @@ help: ## Display this help.
 
 ##@ Build
 
+BINARY_VERSION ?= $(GIT_TAG)
 ifdef VERSION
 	BINARY_VERSION = $(VERSION)
 endif
-BINARY_VERSION ?= ${GIT_TAG}
 
 # Only set Version if building a tag or VERSION is set
 ifneq ($(BINARY_VERSION),)
-	LDFLAGS += -X helm.sh/helm/v3/internal/version.version=${BINARY_VERSION}
+	LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.version=$(BINARY_VERSION)
 endif
 
 VERSION_METADATA = unreleased
@@ -29,19 +29,19 @@ ifneq ($(GIT_TAG),)
 	VERSION_METADATA =
 endif
 
-LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.metadata=${VERSION_METADATA}
-LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.gitCommit=${GIT_COMMIT}
-LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.gitTreeState=${GIT_DIRTY}
+LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.metadata=$(VERSION_METADATA)
+LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.gitCommit=$(GIT_COMMIT)
+LDFLAGS += -X github.com/yeahdongcn/kustohelmize/internal/version.gitTreeState=$(GIT_DIRTY)
 LDFLAGS += $(EXT_LDFLAGS)
 
 .PHONY: build
-build:
+build: ## Build the binary.
 	GO111MODULE=on CGO_ENABLED=0 $(GO) build -o bin/kustohelmize -ldflags '$(LDFLAGS)' $(CURDIR)/main.go
 
 ##@ Test
 
 .PHONY: test
-test: build
+test: build ## test the binary.
 
 	# --config=test.config
 	# --config=production.config
@@ -53,6 +53,8 @@ test: build
 # https://github.com/github/super-linter/issues/1601
 #	@for f in $(shell ls -d mychart-generated/*.yaml); do kubeval $${f} --ignore-missing-schemas; done
 	helm lint ./mychart
+
+##@ Tools
 
 KUBERNETES-SPLIT-YAML = $(shell pwd)/bin/kubernetes-split-yaml
 .PHONY: kubernetes-split-yaml

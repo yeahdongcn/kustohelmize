@@ -1,4 +1,4 @@
-VERSION    := 1.0.0
+VERSION    := v1.0
 GIT_COMMIT := $(shell git rev-parse HEAD)
 GIT_SHA    := $(shell git rev-parse --short HEAD)
 GIT_TAG    := $(shell git describe --tags --abbrev=0 --exact-match 2>/dev/null)
