@@ -42,7 +42,7 @@ build: ## Build the binary.
 
 .PHONY: test
 test: build ## Test the binary.
-	cd examples/memcached-operator; make helm
+	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
 
 ##@ Tools
 

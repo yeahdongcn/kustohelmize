@@ -151,8 +151,6 @@ deploy-dryrun: manifests kustomize ## Deploy controller to the K8s cluster speci
 .PHONY: helm
 helm: deploy-dryrun kustohelmize
 	$(KUSTOHELMIZE) create --from=config/memcached-operator.yaml deployments/memcached-operator
-# https://github.com/github/super-linter/issues/1601
-	@for f in $(shell ls -d deployments/memcached-operator-generated/*.yaml); do kubeval $${f} --ignore-missing-schemas; done
 	helm lint deployments/memcached-operator
 
 .PHONY: undeploy
