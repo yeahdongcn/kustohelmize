@@ -40,9 +40,14 @@ build: ## Build the binary.
 
 ##@ Test
 
+.PHONY: examples
+examples: build ## Test the binary against the examples.
+	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
+
 .PHONY: test
 test: build ## Test the binary.
-	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
+	bin/kustohelmize create --from=test/testdata/0100_deployment.yaml test/output/0100/mychart
+	helm install --dry-run 0100 test/output/0100/mychart > test/output/0100/mychart.yaml
 
 ##@ Tools
 

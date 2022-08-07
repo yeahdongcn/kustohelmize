@@ -136,59 +136,82 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
-		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		if shared {
-			value = fmt.Sprintf(sharedSingleLineValueFormat, key)
-		} else if isGlobalConfig {
-			// name: {{ include "mychart.fullname" . }}
-			value = fmt.Sprintf(globalSingleLineValueFormat, key)
-		} else {
-			// image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+		key, isValue := p.config.GetKey(&xpathConfig, p.context.prefix, isGlobalConfig)
+		if isValue {
 			if len(xpathConfigs) > 1 {
 				for _, xpc := range xpathConfigs {
-					value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
+					key, _ := p.config.GetKey(&xpc, p.context.prefix, isGlobalConfig)
+					value += fmt.Sprintf(singleValueFormat, key)
 					value += config.MultiValueSeparator
 				}
 				value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
 			} else {
-				// imagePullPolicy: {{ .Values.image.pullPolicy }}
-				value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, key)
+				value = fmt.Sprintf(singleValueFormat, key)
 			}
+		} else {
+			value = fmt.Sprintf(singleIncludeFormat, key)
 		}
+		// key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
+		// if shared {
+		// 	value = fmt.Sprintf(sharedSingleLineValueFormat, key)
+		// } else if isGlobalConfig {
+		// 	// name: {{ include "mychart.fullname" . }}
+		// 	value = fmt.Sprintf(globalSingleLineValueFormat, key)
+		// } else {
+		// 	// image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+		// 	if len(xpathConfigs) > 1 {
+		// 		for _, xpc := range xpathConfigs {
+		// 			value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
+		// 			value += config.MultiValueSeparator
+		// 		}
+		// 		value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
+		// 	} else {
+		// 		// imagePullPolicy: {{ .Values.image.pullPolicy }}
+		// 		value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, key)
+		// 	}
+		// }
 		fmt.Fprintln(p.context.out, value)
 		return true
 	case config.XPathStrategyNewline:
-		key := fmt.Sprintf(multilineKeyFormat, v)
+		key := fmt.Sprintf(newlineKeyFormat, v)
 		fmt.Fprintln(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
-		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		if shared {
-			value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
-		} else if isGlobalConfig {
-			// selector:
-			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
-			value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
+		key, isValue := p.config.GetKey(&xpathConfig, p.context.prefix, isGlobalConfig)
+		if isValue {
+			value = fmt.Sprintf(newlineValueFormat, key, (nindent+1)*2)
 		} else {
-			value = fmt.Sprintf(fileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
+			value = fmt.Sprintf(newlineIncludeFormat, key, (nindent+1)*2)
 		}
+		// key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
+		// if shared {
+		// 	value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
+		// } else if isGlobalConfig {
+		// 	// selector:
+		// 	//   {{- include "mychart.selectorLabels" . | nindent 4 }}
+		// 	value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
+		// } else {
+		// 	value = fmt.Sprintf(fileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
+		// }
 		fmt.Fprintln(p.context.out, indent(value, nindent+1))
 		return true
 	case config.XPathStrategyControlWith:
-		var mixed string
-		key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		if shared {
-			// {{- with .Values.tolerations }}
-			// tolerations:
-			//   {{- toYaml . | nindent 8 }}
-			// {{- end }}
-			mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
-		} else if isGlobalConfig {
-			mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
-		} else {
-			mixed = fmt.Sprintf(fileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
-		}
-		fmt.Fprintln(p.context.out, indentsFromSlice(mixed, nindent, hasSliceIndex))
+		key, _ := p.config.GetKey(&xpathConfig, p.context.prefix, isGlobalConfig)
+		value := fmt.Sprintf(withFormat, key, v, (nindent+1)*2)
+
+		// key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
+		// if shared {
+		// 	// {{- with .Values.tolerations }}
+		// 	// tolerations:
+		// 	//   {{- toYaml . | nindent 8 }}
+		// 	// {{- end }}
+		// 	mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
+		// } else if isGlobalConfig {
+		// 	mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
+		// } else {
+		// 	mixed = fmt.Sprintf(fileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
+		// }
+		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
 	case config.XPathStrategyControlIf:
 		p.logger.Info("ControlIf not implemented")

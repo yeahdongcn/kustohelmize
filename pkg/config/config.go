@@ -135,6 +135,18 @@ func (c *ChartConfig) Values() (string, error) {
 	return str, nil
 }
 
+func (c *ChartConfig) GetKey(xc *XPathConfig, prefix string, isGlobalConfig bool) (string, bool) {
+	// TODO: Support default value
+	key, shared := c.GetKeyFromSharedValues(xc)
+	if shared {
+		return fmt.Sprintf(".Values.%s", key), true
+	} else if !isGlobalConfig {
+		return fmt.Sprintf(".Values.%s.%s", prefix, key), true
+	} else {
+		return key, false
+	}
+}
+
 func (c *ChartConfig) GetKeyFromSharedValues(xc *XPathConfig) (string, bool) {
 	key := xc.Key
 	if strings.HasPrefix(key, SharedValues) {

@@ -21,10 +21,7 @@ bin/
 .vscode
 
 # Tests
-test/testdata/
-mychart.config
-mychart-generated/
-mychart/
+test/output
 
 # Examples
 examples/memcached-operator/*
