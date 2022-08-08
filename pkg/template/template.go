@@ -131,6 +131,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 	xpathConfig := xpathConfigs[0]
 	switch xpathConfig.Strategy {
 	case config.XPathStrategyInline:
+		fallthrough
 	case config.XPathStrategyInlineYAML:
 		key := fmt.Sprintf(singleLineKeyFormat, v)
 		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
@@ -158,6 +159,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		fmt.Fprintln(p.context.out, value)
 		return true
 	case config.XPathStrategyNewline:
+		fallthrough
 	case config.XPathStrategyNewlineYAML:
 		key := fmt.Sprintf(newlineKeyFormat, v)
 		fmt.Fprintln(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
@@ -202,6 +204,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
 	// XXX: The priority of file config is greater than global config.
 	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], *hasSliceIndex) {
+		p.logger.V(10).Info("Processed map for file config")
 		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false
@@ -209,6 +212,7 @@ func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath,
 		return true
 	}
 	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], *hasSliceIndex) {
+		p.logger.V(10).Info("Processed map for global config")
 		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false
