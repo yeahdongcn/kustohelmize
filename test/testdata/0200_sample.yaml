@@ -1,25 +1,25 @@
 ---
-# Source: mychart/templates/serviceaccount.yaml
+# Source: yourchart/templates/serviceaccount.yaml
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: xyz-mychart
+  name: xyz-yourchart
   labels:
-    helm.sh/chart: mychart-0.1.0
-    app.kubernetes.io/name: mychart
+    helm.sh/chart: yourchart-0.1.0
+    app.kubernetes.io/name: yourchart
     app.kubernetes.io/instance: xyz
     app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/managed-by: Helm
   annotations: {}
 ---
-# Source: mychart/templates/service.yaml
+# Source: yourchart/templates/service.yaml
 apiVersion: v1
 kind: Service
 metadata:
-  name: xyz-mychart
+  name: xyz-yourchart
   labels:
-    helm.sh/chart: mychart-0.1.0
-    app.kubernetes.io/name: mychart
+    helm.sh/chart: yourchart-0.1.0
+    app.kubernetes.io/name: yourchart
     app.kubernetes.io/instance: xyz
     app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/managed-by: Helm
@@ -31,17 +31,17 @@ spec:
       protocol: TCP
       name: http
   selector:
-    app.kubernetes.io/name: mychart
+    app.kubernetes.io/name: yourchart
     app.kubernetes.io/instance: xyz
 ---
-# Source: mychart/templates/deployment.yaml
+# Source: yourchart/templates/deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: xyz-mychart
+  name: xyz-yourchart
   labels:
-    helm.sh/chart: mychart-0.1.0
-    app.kubernetes.io/name: mychart
+    helm.sh/chart: yourchart-0.1.0
+    app.kubernetes.io/name: yourchart
     app.kubernetes.io/instance: xyz
     app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/managed-by: Helm
@@ -49,19 +49,19 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app.kubernetes.io/name: mychart
+      app.kubernetes.io/name: yourchart
       app.kubernetes.io/instance: xyz
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: mychart
+        app.kubernetes.io/name: yourchart
         app.kubernetes.io/instance: xyz
     spec:
-      serviceAccountName: xyz-mychart
+      serviceAccountName: xyz-yourchart
       securityContext:
         {}
       containers:
-        - name: mychart
+        - name: yourchart
           securityContext:
             {}
           image: "nginx:1.16.0"

@@ -131,6 +131,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 	xpathConfig := xpathConfigs[0]
 	switch xpathConfig.Strategy {
 	case config.XPathStrategyInline:
+	case config.XPathStrategyInlineYAML:
 		key := fmt.Sprintf(singleLineKeyFormat, v)
 		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
@@ -139,23 +140,25 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		if keyType.IsGlobalType() {
 			// name: {{ include "mychart.fullname" . }}
 			value = fmt.Sprintf(singleIncludeFormat, key)
-		} else {
-			if len(xpathConfigs) > 1 {
-				// image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-				for _, xpc := range xpathConfigs {
-					key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpc, p.context.prefix)
-					value += fmt.Sprintf(singleValueFormat, key)
-					value += config.MultiValueSeparator
-				}
-				value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
-			} else {
-				// imagePullPolicy: {{ .Values.image.pullPolicy }}
-				value = fmt.Sprintf(singleValueFormat, key)
+		} else if len(xpathConfigs) > 1 {
+			// image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+			for _, xpc := range xpathConfigs {
+				key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpc, p.context.prefix)
+				value += fmt.Sprintf(singleValueFormat, key)
+				value += config.MultiValueSeparator
 			}
+			value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
+		} else if xpathConfig.Strategy == config.XPathStrategyInline {
+			// imagePullPolicy: {{ .Values.image.pullPolicy }}
+			value = fmt.Sprintf(singleValueFormat, key)
+		} else {
+			// imagePullPolicy: {{ toYaml .Values.image.pullPolicy }}
+			value = fmt.Sprintf(singleValueFormat, key)
 		}
 		fmt.Fprintln(p.context.out, value)
 		return true
 	case config.XPathStrategyNewline:
+	case config.XPathStrategyNewlineYAML:
 		key := fmt.Sprintf(newlineKeyFormat, v)
 		fmt.Fprintln(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
@@ -165,10 +168,14 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 			// selector:
 			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
 			value = fmt.Sprintf(newlineIncludeFormat, key, (nindent+1)*2)
+		} else if xpathConfig.Strategy == config.XPathStrategyNewline {
+			// imagePullPolicy:
+			//   {{- .Values.image.pullPolicy | nindent 12 }}
+			value = fmt.Sprintf(newlineValueFormat, key, (nindent+1)*2)
 		} else {
 			// selector:
-			//   {{ .Values.selector }}
-			value = fmt.Sprintf(newlineValueFormat, key, (nindent+1)*2)
+			//   {{- toYaml .Values.resources | nindent 12 }}
+			value = fmt.Sprintf(newlineYAMLValueFormat, key, (nindent+1)*2)
 		}
 		fmt.Fprintln(p.context.out, indent(value, nindent+1))
 		return true

@@ -28,7 +28,9 @@ type XPathStrategy string
 
 const (
 	XPathStrategyInline       XPathStrategy = "inline"
+	XPathStrategyInlineYAML   XPathStrategy = "inline-yaml"
 	XPathStrategyNewline      XPathStrategy = "newline"
+	XPathStrategyNewlineYAML  XPathStrategy = "newline-yaml"
 	XPathStrategyControlIf    XPathStrategy = "control-if"
 	XPathStrategyControlWith  XPathStrategy = "control-with"
 	XPathStrategyControlRange XPathStrategy = "control-range"
