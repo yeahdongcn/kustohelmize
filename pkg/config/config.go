@@ -11,6 +11,18 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
+type ValueType string
+
+const (
+	ValueTypeDefault ValueType = "default"
+	ValueTypeShared  ValueType = "shared"
+	ValueTypeGlobal  ValueType = "global"
+)
+
+func (t ValueType) isGlobalType() bool {
+	return t == ValueTypeGlobal
+}
+
 type XPathStrategy string
 
 const (
@@ -135,16 +147,21 @@ func (c *ChartConfig) Values() (string, error) {
 	return str, nil
 }
 
+// GetKey chooses the correct value and key for each XPathConfig
 func (c *ChartConfig) GetKey(xc *XPathConfig, prefix string, isGlobalConfig bool) (string, bool) {
-	// TODO: Support default value
+	valueKeyType := ValueTypeGlobal
 	key, shared := c.GetKeyFromSharedValues(xc)
 	if shared {
-		return fmt.Sprintf(".Values.%s", key), true
+		valueKeyType = ValueTypeShared
+		key = fmt.Sprintf(".Values.%s", key)
 	} else if !isGlobalConfig {
-		return fmt.Sprintf(".Values.%s.%s", prefix, key), true
-	} else {
-		return key, false
+		valueKeyType = ValueTypeDefault
+		key = fmt.Sprintf(".Values.%s.%s", prefix, key)
 	}
+	if xc.DefaultValue != "" {
+		key = fmt.Sprintf("%s | default %s", key, xc.DefaultValue)
+	}
+	return key, !valueKeyType.isGlobalType()
 }
 
 func (c *ChartConfig) GetKeyFromSharedValues(xc *XPathConfig) (string, bool) {
