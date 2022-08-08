@@ -124,8 +124,7 @@ func (p *Processor) processSlice(v reflect.Value, nindent int) {
 	}
 }
 
-// TODO: THIS FUNCTION NEEDS TO BE REFACTORED.
-func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs config.XPathConfigs, isGlobalConfig bool, hasSliceIndex bool) bool {
+func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs config.XPathConfigs, hasSliceIndex bool) bool {
 	if len(xpathConfigs) == 0 {
 		return false
 	}
@@ -136,40 +135,24 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
-		key, isValue := p.config.GetKey(&xpathConfig, p.context.prefix, isGlobalConfig)
-		if isValue {
+		key, keyType := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
+		if keyType.IsGlobalType() {
+			// name: {{ include "mychart.fullname" . }}
+			value = fmt.Sprintf(singleIncludeFormat, key)
+		} else {
 			if len(xpathConfigs) > 1 {
+				// image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
 				for _, xpc := range xpathConfigs {
-					key, _ := p.config.GetKey(&xpc, p.context.prefix, isGlobalConfig)
+					key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpc, p.context.prefix)
 					value += fmt.Sprintf(singleValueFormat, key)
 					value += config.MultiValueSeparator
 				}
 				value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
 			} else {
+				// imagePullPolicy: {{ .Values.image.pullPolicy }}
 				value = fmt.Sprintf(singleValueFormat, key)
 			}
-		} else {
-			value = fmt.Sprintf(singleIncludeFormat, key)
 		}
-		// key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		// if shared {
-		// 	value = fmt.Sprintf(sharedSingleLineValueFormat, key)
-		// } else if isGlobalConfig {
-		// 	// name: {{ include "mychart.fullname" . }}
-		// 	value = fmt.Sprintf(globalSingleLineValueFormat, key)
-		// } else {
-		// 	// image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
-		// 	if len(xpathConfigs) > 1 {
-		// 		for _, xpc := range xpathConfigs {
-		// 			value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, xpc.Key)
-		// 			value += config.MultiValueSeparator
-		// 		}
-		// 		value = fmt.Sprintf("\"%s\"", strings.TrimRight(value, config.MultiValueSeparator))
-		// 	} else {
-		// 		// imagePullPolicy: {{ .Values.image.pullPolicy }}
-		// 		value += fmt.Sprintf(fileSingleLineValueFormat, p.context.prefix, key)
-		// 	}
-		// }
 		fmt.Fprintln(p.context.out, value)
 		return true
 	case config.XPathStrategyNewline:
@@ -177,40 +160,25 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		fmt.Fprintln(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
-		key, isValue := p.config.GetKey(&xpathConfig, p.context.prefix, isGlobalConfig)
-		if isValue {
-			value = fmt.Sprintf(newlineValueFormat, key, (nindent+1)*2)
-		} else {
+		key, keyType := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
+		if keyType.IsGlobalType() {
+			// selector:
+			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
 			value = fmt.Sprintf(newlineIncludeFormat, key, (nindent+1)*2)
+		} else {
+			// selector:
+			//   {{ .Values.selector }}
+			value = fmt.Sprintf(newlineValueFormat, key, (nindent+1)*2)
 		}
-		// key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		// if shared {
-		// 	value = fmt.Sprintf(sharedMultilineValueFormat, key, (nindent+1)*2)
-		// } else if isGlobalConfig {
-		// 	// selector:
-		// 	//   {{- include "mychart.selectorLabels" . | nindent 4 }}
-		// 	value = fmt.Sprintf(globalMultilineValueFormat, key, (nindent+1)*2)
-		// } else {
-		// 	value = fmt.Sprintf(fileMultilineValueFormat, p.context.prefix, key, (nindent+1)*2)
-		// }
 		fmt.Fprintln(p.context.out, indent(value, nindent+1))
 		return true
 	case config.XPathStrategyControlWith:
-		key, _ := p.config.GetKey(&xpathConfig, p.context.prefix, isGlobalConfig)
+		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
+		// {{- with .Values.tolerations }}
+		// tolerations:
+		//   {{- toYaml . | nindent 8 }}
+		// {{- end }}
 		value := fmt.Sprintf(withFormat, key, v, (nindent+1)*2)
-
-		// key, shared := p.config.GetKeyFromSharedValues(&xpathConfig)
-		// if shared {
-		// 	// {{- with .Values.tolerations }}
-		// 	// tolerations:
-		// 	//   {{- toYaml . | nindent 8 }}
-		// 	// {{- end }}
-		// 	mixed = fmt.Sprintf(sharedWithMixedFormat, key, v, (nindent+1)*2)
-		// } else if isGlobalConfig {
-		// 	mixed = fmt.Sprintf(globalWithMixedFormat, key, v, (nindent+1)*2)
-		// } else {
-		// 	mixed = fmt.Sprintf(fileWithMixedFormat, p.context.prefix, key, v, (nindent+1)*2)
-		// }
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
 	case config.XPathStrategyControlIf:
@@ -226,14 +194,14 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 
 func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
 	// XXX: The priority of file config is greater than global config.
-	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], false, *hasSliceIndex) {
+	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], *hasSliceIndex) {
 		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false
 		}
 		return true
 	}
-	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], true, *hasSliceIndex) {
+	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], *hasSliceIndex) {
 		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false

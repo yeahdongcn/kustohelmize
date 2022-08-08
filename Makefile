@@ -45,9 +45,21 @@ examples: build ## Test the binary against the examples.
 	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
 
 .PHONY: test
-test: build ## Test the binary.
+test: go-test build 0100 0200 ## Test the binary.
+
+.PHONY: go-test
+go-test:
+	$(GO) test ./...
+
+.PHONY: 0100
+0100: build
 	bin/kustohelmize create --from=test/testdata/0100_deployment.yaml test/output/0100/mychart
-	helm install --dry-run 0100 test/output/0100/mychart > test/output/0100/mychart.yaml
+	helm install --dry-run xyz test/output/0100/mychart > test/output/0100/mychart.yaml
+
+.PHONY: 0200
+0200: build
+	bin/kustohelmize create --from=test/testdata/0200_sample.yaml test/output/0200/mychart
+	helm install --dry-run xyz test/output/0200/mychart > test/output/0200/mychart.yaml
 
 ##@ Tools
 

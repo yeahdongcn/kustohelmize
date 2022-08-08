@@ -11,16 +11,17 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-type ValueType string
+type KeyType string
 
 const (
-	ValueTypeDefault ValueType = "default"
-	ValueTypeShared  ValueType = "shared"
-	ValueTypeGlobal  ValueType = "global"
+	KeyTypeFile     KeyType = "file"
+	KeyTypeShared   KeyType = "shared"
+	KeyTypeGlobal   KeyType = "global"
+	KeyTypeNotFound KeyType = "notfound"
 )
 
-func (t ValueType) isGlobalType() bool {
-	return t == ValueTypeGlobal
+func (t KeyType) IsGlobalType() bool {
+	return t == KeyTypeGlobal
 }
 
 type XPathStrategy string
@@ -65,7 +66,7 @@ func newGlobalConfig(chartname string) *Config {
 		"metadata.name": []XPathConfig{
 			{
 				Strategy: XPathStrategyInline,
-				Key:      fmt.Sprintf(chart.NameFormat, chartname),
+				Key:      fmt.Sprintf(chart.FullNameFormat, chartname),
 			},
 		},
 		"metadata.labels": []XPathConfig{
@@ -88,18 +89,20 @@ type ChartConfig struct {
 
 func NewChartConfig(chartname string) *ChartConfig {
 	config := &ChartConfig{
-		Chartname:    chartname,
-		SharedValues: GenericMap{},
+		Chartname: chartname,
+		SharedValues: GenericMap{
+			"kustohelmize": "https://github.com/yeahdongcn/kustohelmize/",
+		},
 		GlobalConfig: *newGlobalConfig(chartname),
 		FileConfig:   map[string]Config{},
 	}
 	return config
 }
 
-func (c *ChartConfig) Values() (string, error) {
+func (cc *ChartConfig) Values() (string, error) {
 	str := ""
 	// 1. SharedValues
-	out, err := yaml.Marshal(c.SharedValues)
+	out, err := yaml.Marshal(cc.SharedValues)
 	if err != nil {
 		return str, err
 	}
@@ -107,7 +110,7 @@ func (c *ChartConfig) Values() (string, error) {
 
 	// 2. FileConfig
 	root := GenericMap{}
-	for filename, fileConfig := range c.FileConfig {
+	for filename, fileConfig := range cc.FileConfig {
 		key := util.LowerCamelFilenameWithoutExt(filepath.Base(filename))
 		root[key] = GenericMap{}
 		fileRoot := root[key].(GenericMap)
@@ -117,7 +120,8 @@ func (c *ChartConfig) Values() (string, error) {
 				configRoot := fileRoot
 				substrings := strings.Split(c.Key, XPathSeparator)
 				for i, substring := range substrings {
-					if i == 0 && substring == SharedValues {
+					// XXX: For shared values and global defined values, we should not extend values.yaml
+					if i == 0 && (substring == SharedValues || substring == cc.Chartname) {
 						break
 					}
 					if configRoot[substring] == nil {
@@ -126,12 +130,17 @@ func (c *ChartConfig) Values() (string, error) {
 					if i < len(substrings)-1 {
 						configRoot = configRoot[substring].(GenericMap)
 					} else {
-						// XXX: Handle replicas: 1
-						n, err := strconv.Atoi(c.Value)
-						if err == nil {
-							configRoot[substring] = n
+						if len(c.Value) == 0 {
+							// XXX: Handle annotations: {}
+							configRoot[substring] = GenericMap{}
 						} else {
-							configRoot[substring] = c.Value
+							// XXX: Handle replicas: 1
+							n, err := strconv.Atoi(c.Value)
+							if err == nil {
+								configRoot[substring] = n
+							} else {
+								configRoot[substring] = c.Value
+							}
 						}
 					}
 				}
@@ -147,31 +156,33 @@ func (c *ChartConfig) Values() (string, error) {
 	return str, nil
 }
 
-// GetKey chooses the correct value and key for each XPathConfig
-func (c *ChartConfig) GetKey(xc *XPathConfig, prefix string, isGlobalConfig bool) (string, bool) {
-	valueKeyType := ValueTypeGlobal
-	key, shared := c.GetKeyFromSharedValues(xc)
-	if shared {
-		valueKeyType = ValueTypeShared
-		key = fmt.Sprintf(".Values.%s", key)
-	} else if !isGlobalConfig {
-		valueKeyType = ValueTypeDefault
+func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix string) (string, KeyType) {
+	key, keyType := c.getKey(xc)
+	if keyType == KeyTypeFile {
 		key = fmt.Sprintf(".Values.%s.%s", prefix, key)
+	} else if keyType == KeyTypeShared {
+		key = fmt.Sprintf(".Values.%s", key)
 	}
 	if xc.DefaultValue != "" {
 		key = fmt.Sprintf("%s | default %s", key, xc.DefaultValue)
 	}
-	return key, !valueKeyType.isGlobalType()
+	return key, keyType
 }
 
-func (c *ChartConfig) GetKeyFromSharedValues(xc *XPathConfig) (string, bool) {
+func (c *ChartConfig) getKey(xc *XPathConfig) (string, KeyType) {
 	key := xc.Key
 	if strings.HasPrefix(key, SharedValues) {
 		substrings := strings.Split(key, XPathSeparator)
 		if len(substrings) <= 1 {
-			panic("Invalid key")
+			return key, KeyTypeNotFound
 		}
 		key = key[len(SharedValues)+len(XPathSeparator):]
+		if c.SharedValues[key] == nil {
+			return key, KeyTypeNotFound
+		}
+		return key, KeyTypeShared
+	} else if strings.HasPrefix(key, c.Chartname) {
+		return key, KeyTypeGlobal
 	}
-	return key, c.SharedValues[key] != nil
+	return key, KeyTypeFile
 }
