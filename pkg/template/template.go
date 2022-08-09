@@ -138,7 +138,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 
 		var value string
 		key, keyType := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
-		if keyType.IsGlobalType() {
+		if keyType.IsHelpersType() {
 			// name: {{ include "mychart.fullname" . }}
 			value = fmt.Sprintf(singleIncludeFormat, key)
 		} else if len(xpathConfigs) > 1 {
@@ -166,7 +166,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 
 		var value string
 		key, keyType := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
-		if keyType.IsGlobalType() {
+		if keyType.IsHelpersType() {
 			// selector:
 			//   {{- include "mychart.selectorLabels" . | nindent 4 }}
 			value = fmt.Sprintf(newlineIncludeFormat, key, (nindent+1)*2)

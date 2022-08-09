@@ -5,7 +5,8 @@ const (
 	XPathSliceIndexNone = -1
 	XPathSeparator      = "."
 
-	SharedValues = "sharedValues"
+	sharedValuesPrefix  = "sharedValues"
+	builtInValuesPrefix = ".Chart."
 
 	MultiValueSeparator = ":"
 )

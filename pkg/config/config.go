@@ -15,13 +15,14 @@ type KeyType string
 
 const (
 	KeyTypeFile     KeyType = "file"
+	KeyTypeBuiltIn  KeyType = "builtin"
 	KeyTypeShared   KeyType = "shared"
-	KeyTypeGlobal   KeyType = "global"
+	KeyTypeHelpers  KeyType = "helpers"
 	KeyTypeNotFound KeyType = "notfound"
 )
 
-func (t KeyType) IsGlobalType() bool {
-	return t == KeyTypeGlobal
+func (t KeyType) IsHelpersType() bool {
+	return t == KeyTypeHelpers
 }
 
 type XPathStrategy string
@@ -63,8 +64,8 @@ func (xpath XPath) NewChild(s string, sliceIndex int) XPath {
 
 type Config map[XPath]XPathConfigs
 
-func newGlobalConfig(chartname string) *Config {
-	return &Config{
+func defaultGlobalConfig(chartname string) Config {
+	return Config{
 		"metadata.name": []XPathConfig{
 			{
 				Strategy: XPathStrategyInline,
@@ -82,6 +83,17 @@ func newGlobalConfig(chartname string) *Config {
 
 type GenericMap map[string]interface{}
 
+func defaultSharedValues() GenericMap {
+	return GenericMap{
+		"resources":          GenericMap{},
+		"nodeSelector":       GenericMap{},
+		"tolerations":        GenericMap{},
+		"affinity":           GenericMap{},
+		"podSecurityContext": GenericMap{},
+		"securityContext":    GenericMap{},
+	}
+}
+
 type ChartConfig struct {
 	Chartname    string            `yaml:"chartname"`
 	SharedValues GenericMap        `yaml:"sharedValues"`
@@ -91,11 +103,9 @@ type ChartConfig struct {
 
 func NewChartConfig(chartname string) *ChartConfig {
 	config := &ChartConfig{
-		Chartname: chartname,
-		SharedValues: GenericMap{
-			"kustohelmize": "https://github.com/yeahdongcn/kustohelmize/",
-		},
-		GlobalConfig: *newGlobalConfig(chartname),
+		Chartname:    chartname,
+		SharedValues: defaultSharedValues(),
+		GlobalConfig: defaultGlobalConfig(chartname),
 		FileConfig:   map[string]Config{},
 	}
 	return config
@@ -123,7 +133,10 @@ func (cc *ChartConfig) Values() (string, error) {
 				substrings := strings.Split(c.Key, XPathSeparator)
 				for i, substring := range substrings {
 					// XXX: For shared values and global defined values, we should not extend values.yaml
-					if i == 0 && (substring == SharedValues || substring == cc.Chartname) {
+					if i == 0 && (substring == sharedValuesPrefix || substring == cc.Chartname) {
+						break
+					}
+					if i == 1 && substring == "Chart" {
 						break
 					}
 					if configRoot[substring] == nil {
@@ -173,18 +186,20 @@ func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix st
 
 func (c *ChartConfig) getKey(xc *XPathConfig) (string, KeyType) {
 	key := xc.Key
-	if strings.HasPrefix(key, SharedValues) {
+	if strings.HasPrefix(key, sharedValuesPrefix) {
 		substrings := strings.Split(key, XPathSeparator)
 		if len(substrings) <= 1 {
 			return key, KeyTypeNotFound
 		}
-		key = key[len(SharedValues)+len(XPathSeparator):]
+		key = key[len(sharedValuesPrefix)+len(XPathSeparator):]
 		if c.SharedValues[key] == nil {
 			return key, KeyTypeNotFound
 		}
 		return key, KeyTypeShared
 	} else if strings.HasPrefix(key, c.Chartname) {
-		return key, KeyTypeGlobal
+		return key, KeyTypeHelpers
+	} else if strings.HasPrefix(key, builtInValuesPrefix) {
+		return key, KeyTypeBuiltIn
 	}
 	return key, KeyTypeFile
 }
