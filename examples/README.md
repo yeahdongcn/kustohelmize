@@ -202,13 +202,27 @@ We also introduce the `strategy` in the config file.
     namespace: {{ .Values.namespace }}
     ```
 
-2. `newline`
+2. `inline-yaml`
+
+    ```yaml
+    namespace: {{ toYaml .Values.namespace }}
+    ```
+
+3. `newline`
 
     ```yaml
     - name:
       {{ .Values.memcachedOperatorControllerManagerDeployment.manager.name | nindent 12 }}
     ```
-3. `control-with`
+
+4. `newline-yaml`
+
+    ```yaml
+    - name:
+      {{ toYaml .Values.memcachedOperatorControllerManagerDeployment.manager.name | nindent 12 }}
+    ```
+
+5. `control-with`
 
     ```
     {{- with .Values.resources }}
@@ -217,10 +231,10 @@ We also introduce the `strategy` in the config file.
     {{- end }}
     ```
 
-4. `control-if`
+6. `control-if`
 
     TODO
 
-5. `control-range`
+7. `control-range`
 
     TODO
