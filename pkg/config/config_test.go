@@ -7,10 +7,49 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestKeyExist2(t *testing.T) {
+	config := NewChartConfig("chart")
+	config.SharedValues["replicas"] = 1
+	xc := XPathConfig{
+		Strategy: XPathStrategyInline,
+		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "replicas"),
+	}
+	key, exist := config.keyExist(xc.Key)
+	require.True(t, exist)
+	require.Equal(t, key, "replicas")
+}
+
+func TestKeyExist1(t *testing.T) {
+	config := NewChartConfig("chart")
+	var empty struct{}
+	config.SharedValues["this"] = map[string]interface{}{"is": map[string]interface{}{"a": map[string]interface{}{"nodeSelector": empty}}}
+	xc := XPathConfig{
+		Strategy: XPathStrategyInline,
+		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "this.is.a.nodeSelector"),
+	}
+	key, exist := config.keyExist(xc.Key)
+	require.True(t, exist)
+	require.Equal(t, key, "this.is.a.nodeSelector")
+
+	xc = XPathConfig{
+		Strategy: XPathStrategyInline,
+		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "this.isa.nodeSelector"),
+	}
+	_, exist = config.keyExist(xc.Key)
+	require.False(t, exist)
+
+	xc = XPathConfig{
+		Strategy: XPathStrategyInline,
+		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "this.is.a.nodeSelectorX"),
+	}
+	_, exist = config.keyExist(xc.Key)
+	require.False(t, exist)
+}
+
 func TestGetKeyFromSharedValues(t *testing.T) {
 	config := NewChartConfig("chart")
 	var empty struct{}
-	config.SharedValues["this.is.a.nodeSelector"] = empty
+	config.SharedValues["this"] = map[string]interface{}{"is": map[string]interface{}{"a": map[string]interface{}{"nodeSelector": empty}}}
 	xc := XPathConfig{
 		Strategy: XPathStrategyInline,
 		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "this.is.a.nodeSelector"),

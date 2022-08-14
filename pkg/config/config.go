@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -82,6 +83,33 @@ func defaultGlobalConfig(chartname string) Config {
 }
 
 type GenericMap map[string]interface{}
+
+func walk(v reflect.Value, key string) bool {
+	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+	switch v.Kind() {
+	case reflect.Array, reflect.Slice:
+		for i := 0; i < v.Len(); i++ {
+			if walk(v.Index(i), key) {
+				return true
+			}
+		}
+	case reflect.Map:
+		for _, k := range v.MapKeys() {
+			if walk(v.MapIndex(k), key) {
+				return true
+			}
+		}
+	default:
+		if v.String() == key {
+			return true
+		}
+		// handle other types
+	}
+
+	return false
+}
 
 func defaultSharedValues() GenericMap {
 	return GenericMap{
@@ -177,6 +205,8 @@ func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix st
 		key = fmt.Sprintf(".Values.%s.%s", prefix, key)
 	} else if keyType == KeyTypeShared {
 		key = fmt.Sprintf(".Values.%s", key)
+	} else if keyType == KeyTypeNotFound {
+		panic(fmt.Sprintf("%s not found", xc.Key))
 	}
 	if xc.DefaultValue != "" {
 		key = fmt.Sprintf("%s | default %s", key, xc.DefaultValue)
@@ -184,15 +214,43 @@ func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix st
 	return key, keyType
 }
 
+func (c *ChartConfig) keyExist(key string) (string, bool) {
+	substrings := strings.Split(key, XPathSeparator)
+	if len(substrings) <= 1 {
+		return key, false
+	}
+	key = key[len(sharedValuesPrefix)+len(XPathSeparator):]
+	current := c.SharedValues
+	for index, substring := range substrings {
+		if substring == sharedValuesPrefix {
+			continue
+		}
+		out, err := yaml.Marshal(current[substring])
+		if err != nil {
+			return key, false
+		}
+		next := GenericMap{}
+		err = yaml.Unmarshal(out, &next)
+		if err != nil {
+			if index == len(substrings)-1 {
+				continue
+			}
+			return key, false
+		}
+		if next == nil {
+			return key, false
+		} else {
+			current = next
+		}
+	}
+	return key, true
+}
+
 func (c *ChartConfig) getKey(xc *XPathConfig) (string, KeyType) {
 	key := xc.Key
 	if strings.HasPrefix(key, sharedValuesPrefix) {
-		substrings := strings.Split(key, XPathSeparator)
-		if len(substrings) <= 1 {
-			return key, KeyTypeNotFound
-		}
-		key = key[len(sharedValuesPrefix)+len(XPathSeparator):]
-		if c.SharedValues[key] == nil {
+		key, exist := c.keyExist(key)
+		if !exist {
 			return key, KeyTypeNotFound
 		}
 		return key, KeyTypeShared
