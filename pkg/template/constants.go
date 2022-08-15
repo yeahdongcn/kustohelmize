@@ -31,4 +31,11 @@ const (
 	withFormat = leftDelimiterTrimSpaceTrailing + "with %s" + rightDelimiter + "\n%s:\n" +
 		"  " + leftDelimiterTrimSpaceTrailing + "toYaml . | nindent %d" + rightDelimiter + "\n" +
 		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
+
+	ifFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s:\n" +
+		"  " + leftDelimiter + "%s | nindent %d" + rightDelimiter + "\n" +
+		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
+	ifYAMLFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s:\n" +
+		"  " + leftDelimiter + "toYaml %s | nindent %d" + rightDelimiter + "\n" +
+		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
 )

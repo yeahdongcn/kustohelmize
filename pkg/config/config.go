@@ -29,13 +29,14 @@ func (t KeyType) IsHelpersType() bool {
 type XPathStrategy string
 
 const (
-	XPathStrategyInline       XPathStrategy = "inline"
-	XPathStrategyInlineYAML   XPathStrategy = "inline-yaml"
-	XPathStrategyNewline      XPathStrategy = "newline"
-	XPathStrategyNewlineYAML  XPathStrategy = "newline-yaml"
-	XPathStrategyControlIf    XPathStrategy = "control-if"
-	XPathStrategyControlWith  XPathStrategy = "control-with"
-	XPathStrategyControlRange XPathStrategy = "control-range"
+	XPathStrategyInline        XPathStrategy = "inline"
+	XPathStrategyInlineYAML    XPathStrategy = "inline-yaml"
+	XPathStrategyNewline       XPathStrategy = "newline"
+	XPathStrategyNewlineYAML   XPathStrategy = "newline-yaml"
+	XPathStrategyControlIf     XPathStrategy = "control-if"
+	XPathStrategyControlIfYAML XPathStrategy = "control-if-yaml"
+	XPathStrategyControlWith   XPathStrategy = "control-with"
+	XPathStrategyControlRange  XPathStrategy = "control-range"
 )
 
 type XPathConfig struct {
@@ -206,7 +207,11 @@ func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix st
 	} else if keyType == KeyTypeShared {
 		key = fmt.Sprintf(".Values.%s", key)
 	} else if keyType == KeyTypeNotFound {
-		panic(fmt.Sprintf("%s not found", xc.Key))
+		if xc.Strategy == XPathStrategyControlIf || xc.Strategy == XPathStrategyControlIfYAML {
+			key = fmt.Sprintf(".Values.%s", key)
+		} else {
+			panic(fmt.Sprintf("%s not found", xc.Key))
+		}
 	}
 	if xc.DefaultValue != "" {
 		key = fmt.Sprintf("%s | default %s", key, xc.DefaultValue)
