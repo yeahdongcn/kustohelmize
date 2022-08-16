@@ -162,7 +162,7 @@ func (cc *ChartConfig) Values() (string, error) {
 				substrings := strings.Split(c.Key, XPathSeparator)
 				for i, substring := range substrings {
 					// XXX: For shared values and global defined values, we should not extend values.yaml
-					if i == 0 && (substring == sharedValuesPrefix || substring == cc.Chartname) {
+					if i == 0 && (substring == sharedValuesPrefix || substring == cc.Chartname || substring == "") {
 						break
 					}
 					if i == 1 && substring == "Chart" {
@@ -176,7 +176,7 @@ func (cc *ChartConfig) Values() (string, error) {
 					} else {
 						if len(c.Value) == 0 {
 							// XXX: Handle annotations: {}
-							configRoot[substring] = GenericMap{}
+							// configRoot[substring] = GenericMap{}
 						} else {
 							// XXX: Handle replicas: 1
 							n, err := strconv.Atoi(c.Value)
