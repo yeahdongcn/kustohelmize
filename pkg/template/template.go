@@ -197,7 +197,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 
 		var value string
 		if xpathConfig.Strategy == config.XPathStrategyControlIf {
-			value = fmt.Sprintf(ifFormat, key, v, key, (nindent+1)*2)
+			value = fmt.Sprintf(ifFormat, key, v, key)
 		} else {
 			value = fmt.Sprintf(ifYAMLFormat, key, v, key, (nindent+1)*2)
 		}

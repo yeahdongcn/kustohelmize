@@ -33,7 +33,7 @@ const (
 		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
 
 	ifFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s: " +
-		leftDelimiter + "%s | nindent %d" + rightDelimiter + "\n" +
+		leftDelimiter + "%s" + rightDelimiter + "\n" +
 		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
 	ifYAMLFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s: " +
 		leftDelimiter + "toYaml %s | nindent %d" + rightDelimiter + "\n" +
