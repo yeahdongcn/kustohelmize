@@ -176,7 +176,7 @@ func (cc *ChartConfig) Values() (string, error) {
 					} else {
 						if len(c.Value) == 0 {
 							// XXX: Handle annotations: {}
-							// configRoot[substring] = GenericMap{}
+							delete(configRoot, substring)
 						} else {
 							// XXX: Handle replicas: 1
 							n, err := strconv.Atoi(c.Value)
