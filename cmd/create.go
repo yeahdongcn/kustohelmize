@@ -214,7 +214,7 @@ func (o *createOptions) run(out io.Writer) error {
 		return err
 	}
 
-	p := template.NewProcessor(o.logger.WithName("template"), config, filepath.Join(chartdir, chartutil.TemplatesDir))
+	p := template.NewProcessor(o.logger.WithName("template"), config, filepath.Join(chartdir, chartutil.TemplatesDir), filepath.Join(chartdir, "crds"))
 	err = p.Process()
 	if err != nil {
 		o.logger.Error(err, "Error processing templates")

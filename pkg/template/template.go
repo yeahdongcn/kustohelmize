@@ -25,26 +25,28 @@ type context struct {
 }
 
 type Processor struct {
-	logger  logr.Logger
-	config  *config.ChartConfig
-	destDir string
+	logger       logr.Logger
+	config       *config.ChartConfig
+	templatesDir string
+	crdsDir      string
 
 	context context
 }
 
-func NewProcessor(logger logr.Logger, config *config.ChartConfig, destDir string) *Processor {
+func NewProcessor(logger logr.Logger, config *config.ChartConfig, templatesDir, crdsDir string) *Processor {
 	return &Processor{
-		logger:  logger,
-		destDir: destDir,
-		config:  config,
+		logger:       logger,
+		templatesDir: templatesDir,
+		crdsDir:      crdsDir,
+		config:       config,
 	}
 }
 
 func (p *Processor) Process() error {
 	for source, fileConfig := range p.config.FileConfig {
 		filename := filepath.Base(source)
-		dest := filepath.Join(p.destDir, filename)
 		if util.IsCustomResourceDefinition(filename) {
+			dest := filepath.Join(p.crdsDir, filename)
 			err := fs.CopyFile(source, dest)
 			if err != nil {
 				p.logger.Error(err, "Error copying file", "source", source, "dest", dest)
@@ -53,6 +55,7 @@ func (p *Processor) Process() error {
 			continue
 		}
 
+		dest := filepath.Join(p.templatesDir, filename)
 		file, err := os.Create(dest)
 		if err != nil {
 			p.logger.Error(err, "Error creating dest file", "dest", dest)
