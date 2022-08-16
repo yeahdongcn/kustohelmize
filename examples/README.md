@@ -233,7 +233,19 @@ We also introduce the `strategy` in the config file.
 
 6. `control-if`
 
-    TODO
+    ```
+    {{- if .Values.operator.initContainer.imagePullPolicy }}
+    imagePullPolicy: {{ .Values.operator.initContainer.imagePullPolicy }}
+    {{- end }}
+    ```
+
+6. `control-if-yaml`
+
+    ```
+    {{- if .Values.operator.initContainer.imagePullSecrets }}
+    imagePullSecrets: {{ toYaml .Values.operator.initContainer.imagePullSecrets | nindent 8 }}
+    {{- end }}
+    ```
 
 7. `control-range`
 
