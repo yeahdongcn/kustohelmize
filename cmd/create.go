@@ -117,6 +117,7 @@ func (o *createOptions) configPath() string {
 
 func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	path := o.configPath()
+	logger := o.logger.WithName("config")
 	_, err := os.Stat(path)
 	if err == nil {
 		o.logger.Info("Config file already exists", "path", path)
@@ -126,7 +127,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 			o.logger.Error(err, "Error reading config file", "path", path)
 			return nil, err
 		}
-		config := &config.ChartConfig{}
+		config := &config.ChartConfig{Logger: logger}
 		err = yaml.Unmarshal(out, config)
 		if err != nil {
 			o.logger.Error(err, "Error unmarshalling config file", "path", path)
@@ -136,7 +137,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	}
 
 	chartname := o.chartname()
-	config := cfg.NewChartConfig(chartname)
+	config := cfg.NewChartConfig(logger, chartname)
 
 	c, err := os.ReadDir(o.intermediateDir)
 	for _, entry := range c {

@@ -3,10 +3,9 @@ package config
 import (
 	"fmt"
 	"path/filepath"
-	"reflect"
-	"strconv"
 	"strings"
 
+	"github.com/go-logr/logr"
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
 	"github.com/yeahdongcn/kustohelmize/pkg/util"
 	"gopkg.in/yaml.v2"
@@ -42,8 +41,8 @@ const (
 type XPathConfig struct {
 	Strategy     XPathStrategy `yaml:"strategy"`
 	Key          string        `yaml:"key"`
-	Value        string        `yaml:"value,omitempty"`
-	DefaultValue string        `yaml:"defaultValue,omitempty"`
+	Value        interface{}   `yaml:"value,omitempty"`
+	DefaultValue interface{}   `yaml:"defaultValue,omitempty"`
 }
 
 type XPathConfigs []XPathConfig
@@ -85,33 +84,6 @@ func defaultGlobalConfig(chartname string) Config {
 
 type GenericMap map[string]interface{}
 
-func walk(v reflect.Value, key string) bool {
-	for v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
-		v = v.Elem()
-	}
-	switch v.Kind() {
-	case reflect.Array, reflect.Slice:
-		for i := 0; i < v.Len(); i++ {
-			if walk(v.Index(i), key) {
-				return true
-			}
-		}
-	case reflect.Map:
-		for _, k := range v.MapKeys() {
-			if walk(v.MapIndex(k), key) {
-				return true
-			}
-		}
-	default:
-		if v.String() == key {
-			return true
-		}
-		// handle other types
-	}
-
-	return false
-}
-
 func defaultSharedValues() GenericMap {
 	return GenericMap{
 		"resources":          GenericMap{},
@@ -124,14 +96,16 @@ func defaultSharedValues() GenericMap {
 }
 
 type ChartConfig struct {
+	Logger       logr.Logger
 	Chartname    string            `yaml:"chartname"`
 	SharedValues GenericMap        `yaml:"sharedValues"`
 	GlobalConfig Config            `yaml:"globalConfig"`
 	FileConfig   map[string]Config `yaml:"fileConfig"`
 }
 
-func NewChartConfig(chartname string) *ChartConfig {
+func NewChartConfig(logger logr.Logger, chartname string) *ChartConfig {
 	config := &ChartConfig{
+		Logger:       logger,
 		Chartname:    chartname,
 		SharedValues: defaultSharedValues(),
 		GlobalConfig: defaultGlobalConfig(chartname),
@@ -174,16 +148,19 @@ func (cc *ChartConfig) Values() (string, error) {
 					if i < len(substrings)-1 {
 						configRoot = configRoot[substring].(GenericMap)
 					} else {
-						if len(c.Value) == 0 {
-							// XXX: Handle annotations: {}
-							delete(configRoot, substring)
+						if c.Value == nil {
+							panic(fmt.Sprintf("Value is nil for key %s", c.Key))
 						} else {
-							// XXX: Handle replicas: 1
-							n, err := strconv.Atoi(c.Value)
-							if err == nil {
-								configRoot[substring] = n
-							} else {
-								configRoot[substring] = c.Value
+							switch v := c.Value.(type) {
+							case int:
+								cc.Logger.V(10).Info("type int", "key", c.Key, "value", v)
+								configRoot[substring] = v
+							case string:
+								cc.Logger.V(10).Info("type string", "key", c.Key, "value", v)
+								configRoot[substring] = v
+							default:
+								cc.Logger.V(10).Info("type default", "key", c.Key)
+								configRoot[substring] = v
 							}
 						}
 					}
@@ -213,7 +190,7 @@ func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix st
 			panic(fmt.Sprintf("%s not found", xc.Key))
 		}
 	}
-	if xc.DefaultValue != "" {
+	if xc.DefaultValue != nil {
 		key = fmt.Sprintf("%s | default %s", key, xc.DefaultValue)
 	}
 	return key, keyType
