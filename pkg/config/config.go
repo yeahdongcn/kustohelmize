@@ -149,7 +149,7 @@ func (cc *ChartConfig) Values() (string, error) {
 						configRoot = configRoot[substring].(GenericMap)
 					} else {
 						if c.Value == nil {
-							panic(fmt.Sprintf("Value is nil for key %s", c.Key))
+							cc.Logger.Info(fmt.Sprintf("%s: %s", c.Key, "nil"))
 						} else {
 							switch v := c.Value.(type) {
 							case int:
