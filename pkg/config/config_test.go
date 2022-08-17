@@ -5,10 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 )
 
 func TestKeyExist2(t *testing.T) {
-	config := NewChartConfig("chart")
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
 	config.SharedValues["replicas"] = 1
 	xc := XPathConfig{
 		Strategy: XPathStrategyInline,
@@ -20,7 +22,8 @@ func TestKeyExist2(t *testing.T) {
 }
 
 func TestKeyExist1(t *testing.T) {
-	config := NewChartConfig("chart")
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
 	var empty struct{}
 	config.SharedValues["this"] = map[string]interface{}{"is": map[string]interface{}{"a": map[string]interface{}{"nodeSelector": empty}}}
 	xc := XPathConfig{
@@ -47,7 +50,8 @@ func TestKeyExist1(t *testing.T) {
 }
 
 func TestGetKeyFromSharedValues(t *testing.T) {
-	config := NewChartConfig("chart")
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
 	var empty struct{}
 	config.SharedValues["this"] = map[string]interface{}{"is": map[string]interface{}{"a": map[string]interface{}{"nodeSelector": empty}}}
 	xc := XPathConfig{
@@ -68,7 +72,8 @@ func TestGetKeyFromSharedValues(t *testing.T) {
 }
 
 func TestValues(t *testing.T) {
-	config := NewChartConfig("chart")
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
 	var empty struct{}
 	config.SharedValues["nodeSelector"] = empty
 	config.FileConfig["deployment.yaml"] = Config{

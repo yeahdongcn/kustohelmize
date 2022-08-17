@@ -150,6 +150,7 @@ func (cc *ChartConfig) Values() (string, error) {
 					} else {
 						if c.Value == nil {
 							cc.Logger.Info(fmt.Sprintf("%s: %s", c.Key, "nil"))
+							delete(configRoot, substring)
 						} else {
 							switch v := c.Value.(type) {
 							case int:
