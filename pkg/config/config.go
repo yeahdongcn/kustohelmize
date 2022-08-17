@@ -158,6 +158,20 @@ func (cc *ChartConfig) Values() (string, error) {
 							case string:
 								cc.Logger.V(10).Info("type string", "key", c.Key, "value", v)
 								configRoot[substring] = v
+							case map[interface{}]interface{}:
+								cc.Logger.V(10).Info("type map[interface{}]interface{}", "key", c.Key)
+								if len(v) == 0 {
+									delete(configRoot, substring)
+								} else {
+									configRoot[substring] = v
+								}
+							case []interface{}:
+								cc.Logger.V(10).Info("type []interface{}", "key", c.Key)
+								if len(v) == 0 {
+									delete(configRoot, substring)
+								} else {
+									configRoot[substring] = v
+								}
 							default:
 								cc.Logger.V(10).Info("type default", "key", c.Key)
 								configRoot[substring] = v
