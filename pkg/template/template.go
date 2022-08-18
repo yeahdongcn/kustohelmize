@@ -221,7 +221,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
 	// XXX: The priority of file config is greater than global config.
 	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], *hasSliceIndex) {
-		p.logger.V(10).Info("Processed map for file config")
+		p.logger.V(10).Info("Processed map for file config", "xpath", xpath)
 		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false
@@ -229,7 +229,7 @@ func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath,
 		return true
 	}
 	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], *hasSliceIndex) {
-		p.logger.V(10).Info("Processed map for global config")
+		p.logger.V(10).Info("Processed map for global config", "xpath", xpath)
 		// XXX: For the first element only.
 		if *hasSliceIndex {
 			*hasSliceIndex = false

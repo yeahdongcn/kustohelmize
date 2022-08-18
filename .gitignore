@@ -20,11 +20,6 @@ bin/
 # vscode extensions
 .vscode
 
-# Tests
-test/output/*
-!test/output/0100/mychart.config
-!test/output/0200/mychart.config
-
 # Examples
 examples/memcached-operator/*
 !examples/memcached-operator/Makefile

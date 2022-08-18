@@ -1,0 +1,13 @@
+---
+# Source: yourchart/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: xyz-yourchart
+  labels:
+    helm.sh/chart: yourchart-0.1.0
+    app.kubernetes.io/name: yourchart
+    app.kubernetes.io/instance: xyz
+    app.kubernetes.io/version: "1.16.0"
+    app.kubernetes.io/managed-by: Helm
+  annotations: {}
