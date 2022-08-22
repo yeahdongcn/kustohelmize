@@ -1,6 +1,8 @@
 package cmd
 
 import (
+	"bufio"
+	"bytes"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -24,6 +26,7 @@ import (
 type createOptions struct {
 	logger logr.Logger
 
+	version                      string
 	from                         string
 	kubernetesSplitYamlCommand   string
 	intermediateDir              string
@@ -73,6 +76,7 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 		},
 	}
 
+	cmd.Flags().StringVarP(&o.version, "version", "v", "", "A SemVer 2 conformant version string of the chart.")
 	cmd.Flags().StringVarP(&o.from, "from", "f", "", "TODO")
 	cmd.MarkFlagRequired("from")
 	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
@@ -206,6 +210,27 @@ func (o *createOptions) run(out io.Writer) error {
 		o.logger.V(10).Info("Removing file", "name", file)
 		// Explicitly ignore errors here.
 		os.Remove(file)
+	}
+
+	chartfile := filepath.Join(chartdir, chartutil.ChartfileName)
+	ins, err := ioutil.ReadFile(chartfile)
+	if err != nil {
+		o.logger.Error(err, "Error reading chartfile")
+		return err
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(ins))
+	outs := ""
+	for scanner.Scan() {
+		if o.version != "" && scanner.Text() == "version: 0.1.0" {
+			outs += fmt.Sprintf("version: %s\n", o.version)
+		} else {
+			outs += scanner.Text() + "\n"
+		}
+	}
+	err = ioutil.WriteFile(chartfile, []byte(outs), 0644)
+	if err != nil {
+		o.logger.Error(err, "Error writing chartfile")
+		return err
 	}
 
 	v := value.NewProcessor(o.logger.WithName("value"), config, chartdir)

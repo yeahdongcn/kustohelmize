@@ -58,7 +58,7 @@ go-test:
 
 .PHONY: 0200
 0200: build
-	bin/kustohelmize create --from=test/testdata/0200_sample.yaml test/output/0200/mychart
+	bin/kustohelmize create --from=test/testdata/0200_sample.yaml --version=1.0.0 test/output/0200/mychart
 	helm install --dry-run xyz test/output/0200/mychart > test/output/0200/mychart.yaml
 	yft restructure --in-place test/output/0200/mychart.yaml
 
