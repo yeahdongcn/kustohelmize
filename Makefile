@@ -60,6 +60,7 @@ go-test:
 0200: build
 	bin/kustohelmize create --from=test/testdata/0200_sample.yaml test/output/0200/mychart
 	helm install --dry-run xyz test/output/0200/mychart > test/output/0200/mychart.yaml
+	dyff yaml -i --restructure test/output/0200/mychart.yaml
 
 ##@ Tools
 

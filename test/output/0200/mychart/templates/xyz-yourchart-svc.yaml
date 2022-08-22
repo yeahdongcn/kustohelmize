@@ -6,9 +6,9 @@ metadata:
   labels:
     {{- include "mychart.labels" . | nindent 4 }}
 spec: 
-  type: {{ .Values.xyzYourchartSvc.service.type }}
   {{- if .Values.xyzYourchartSvc.service.ports }}
   ports: {{ toYaml .Values.xyzYourchartSvc.service.ports | nindent 4 }}
   {{- end }}
   selector:
     {{- include "mychart.selectorLabels" . | nindent 4 }}
+  type: {{ .Values.xyzYourchartSvc.service.type }}
