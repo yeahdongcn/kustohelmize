@@ -2,14 +2,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata: 
+  name: {{ include "mychart.fullname" . }}
   labels:
     {{- include "mychart.labels" . | nindent 4 }}
-  name: {{ include "mychart.fullname" . }}
 spec: 
-  replicas: {{ .Values.replicas }}
-  selector: 
-    matchLabels:
-      {{- include "mychart.selectorLabels" . | nindent 6 }}
   template: 
     metadata: 
       labels:
@@ -19,10 +15,7 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:         
-        - securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.xyzYourchartDeployment.image.repository }}:{{ .Values.xyzYourchartDeployment.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.xyzYourchartDeployment.image.imagePullPolicy }}
+        - imagePullPolicy: {{ .Values.xyzYourchartDeployment.image.imagePullPolicy }}
           {{- if .Values.xyzYourchartDeployment.deployment.ports }}
           ports: {{ toYaml .Values.xyzYourchartDeployment.deployment.ports | nindent 12 }}
           {{- end }}
@@ -37,3 +30,10 @@ spec:
           resources:
             {{- toYaml .Values.deployment.resources | nindent 12 }}
           name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.xyzYourchartDeployment.image.repository }}:{{ .Values.xyzYourchartDeployment.image.tag | default .Chart.AppVersion }}"
+  replicas: {{ .Values.replicas }}
+  selector: 
+    matchLabels:
+      {{- include "mychart.selectorLabels" . | nindent 6 }}
