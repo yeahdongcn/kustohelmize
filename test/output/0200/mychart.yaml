@@ -1,5 +1,5 @@
 NAME: xyz
-LAST DEPLOYED: Thu Aug 18 14:11:25 2022
+LAST DEPLOYED: Mon Aug 22 08:46:01 2022
 NAMESPACE: default
 STATUS: pending-install
 REVISION: 1
@@ -56,14 +56,22 @@ metadata:
     app.kubernetes.io/version: "1.16.0"
     app.kubernetes.io/managed-by: Helm
 spec: 
+  replicas: 1
+  selector: 
+    matchLabels:
+      app.kubernetes.io/name: mychart
+      app.kubernetes.io/instance: xyz
   template: 
     metadata: 
       labels:
         app.kubernetes.io/name: mychart
         app.kubernetes.io/instance: xyz
     spec: 
+      serviceAccountName: xyz-mychart
+      securityContext:
+        {}
       containers:         
-        -
+        - imagePullPolicy: Always
           ports: 
             - containerPort: 80
               name: http
@@ -82,13 +90,4 @@ spec:
           securityContext:
             {}
           image: "nginx:stable"
-          imagePullPolicy: Always
-      serviceAccountName: xyz-mychart
-      securityContext:
-        {}
-  replicas: 1
-  selector: 
-    matchLabels:
-      app.kubernetes.io/name: mychart
-      app.kubernetes.io/instance: xyz
 

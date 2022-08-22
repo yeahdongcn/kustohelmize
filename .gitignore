@@ -16,6 +16,7 @@ vendor/
 
 # Binaries
 bin/
+kyaml/kyaml
 
 # vscode extensions
 .vscode
