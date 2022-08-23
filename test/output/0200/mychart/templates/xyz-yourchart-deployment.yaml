@@ -19,7 +19,8 @@ spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:         
-        - imagePullPolicy: {{ .Values.xyzYourchartDeployment.image.imagePullPolicy }}
+        - image: "{{ .Values.xyzYourchartDeployment.image.repository }}:{{ .Values.xyzYourchartDeployment.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.xyzYourchartDeployment.image.imagePullPolicy }}
           {{- if .Values.xyzYourchartDeployment.deployment.ports }}
           ports: {{ toYaml .Values.xyzYourchartDeployment.deployment.ports | nindent 12 }}
           {{- end }}
@@ -36,4 +37,3 @@ spec:
           name: {{ .Chart.Name }}
           securityContext:
             {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.xyzYourchartDeployment.image.repository }}:{{ .Values.xyzYourchartDeployment.image.tag | default .Chart.AppVersion }}"

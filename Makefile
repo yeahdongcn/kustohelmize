@@ -60,7 +60,7 @@ go-test:
 0200: build
 	bin/kustohelmize create --from=test/testdata/0200_sample.yaml --version=1.0.0 test/output/0200/mychart
 	helm install --dry-run xyz test/output/0200/mychart > test/output/0200/mychart.yaml
-	yq -i -P 'sort_keys(..)' test/output/0200/mychart.yaml
+	yq -i -P '... comments="" | sort_keys(..)' test/output/0200/mychart.yaml
 
 ##@ Tools
 
