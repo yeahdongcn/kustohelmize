@@ -1,5 +1,5 @@
 HOOKS:
-LAST DEPLOYED: Tue Aug 23 11:00:31 2022
+LAST DEPLOYED: Tue Aug 23 15:50:38 2022
 MANIFEST:
 NAME: xyz
 NAMESPACE: default
@@ -14,7 +14,7 @@ metadata:
     app.kubernetes.io/instance: xyz
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: mychart
-    app.kubernetes.io/version: 1.16.0
+    app.kubernetes.io/version: 1.0.0
     helm.sh/chart: mychart-1.0.0
   name: xyz-mychart
 ---
@@ -25,7 +25,7 @@ metadata:
     app.kubernetes.io/instance: xyz
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: mychart
-    app.kubernetes.io/version: 1.16.0
+    app.kubernetes.io/version: 1.0.0
     helm.sh/chart: mychart-1.0.0
   name: xyz-mychart
 spec:
@@ -46,7 +46,7 @@ metadata:
     app.kubernetes.io/instance: xyz
     app.kubernetes.io/managed-by: Helm
     app.kubernetes.io/name: mychart
-    app.kubernetes.io/version: 1.16.0
+    app.kubernetes.io/version: 1.0.0
     helm.sh/chart: mychart-1.0.0
   name: xyz-mychart
 spec:

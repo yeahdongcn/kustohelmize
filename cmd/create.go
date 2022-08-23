@@ -26,7 +26,10 @@ import (
 type createOptions struct {
 	logger logr.Logger
 
-	version                      string
+	version     string
+	appVersion  string
+	description string
+
 	from                         string
 	kubernetesSplitYamlCommand   string
 	intermediateDir              string
@@ -76,15 +79,18 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 		},
 	}
 
-	cmd.Flags().StringVarP(&o.version, "version", "v", "", "A SemVer 2 conformant version string of the chart.")
-	cmd.Flags().StringVarP(&o.from, "from", "f", "", "TODO")
+	cmd.Flags().StringVarP(&o.version, "version", "v", "", "A SemVer 2 conformant version string of the chart")
+	cmd.Flags().StringVarP(&o.appVersion, "app-version", "a", "", "The version of the application enclosed inside of this chart")
+	cmd.Flags().StringVarP(&o.description, "description", "d", "", "A one-sentence description of the chart")
+
+	cmd.Flags().StringVarP(&o.from, "from", "f", "", "The path to a kustomized YAML file")
 	cmd.MarkFlagRequired("from")
 	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
-	cmd.Flags().StringVarP(&o.intermediateDir, "intermediate-dir", "i", "", "TODO")
+	cmd.Flags().StringVarP(&o.intermediateDir, "intermediate-dir", "i", "", "The path to a intermediate directory")
 	cmd.Flags().MarkHidden("intermediate-dir")
-	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "", false, "TODO")
+	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "", false, "Whether to cleanup the intermediate directory")
 	cmd.Flags().MarkHidden("cleanup")
-	cmd.Flags().StringVarP(&o.config, "config", "c", "", "TODO")
+	cmd.Flags().StringVarP(&o.config, "config", "c", "", "The path to a config file")
 	cmd.Flags().MarkHidden("config")
 
 	cmd.Flags().StringVarP(&o.starter, "starter", "p", "", "the name or absolute path to Helm starter scaffold")
@@ -223,6 +229,10 @@ func (o *createOptions) run(out io.Writer) error {
 	for scanner.Scan() {
 		if o.version != "" && scanner.Text() == "version: 0.1.0" {
 			outs += fmt.Sprintf("version: %s\n", o.version)
+		} else if o.appVersion != "" && scanner.Text() == "appVersion: \"1.16.0\"" {
+			outs += fmt.Sprintf("appVersion: \"%s\"\n", o.appVersion)
+		} else if o.description != "" && scanner.Text() == "description: A Helm chart for Kubernetes" {
+			outs += fmt.Sprintf("description: %s\n", o.description)
 		} else {
 			outs += scanner.Text() + "\n"
 		}
