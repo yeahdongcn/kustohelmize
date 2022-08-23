@@ -15,25 +15,25 @@ spec:
       labels:
         {{- include "mychart.selectorLabels" . | nindent 8 }}
     spec: 
+      serviceAccountName: {{ include "mychart.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:         
-        - resources:
-            {{- toYaml .Values.deployment.resources | nindent 12 }}
-          name: {{ .Chart.Name }}
-          securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
-          image: "{{ .Values.xyzYourchartDeployment.image.repository }}:{{ .Values.xyzYourchartDeployment.image.tag | default .Chart.AppVersion }}"
-          imagePullPolicy: {{ .Values.xyzYourchartDeployment.image.imagePullPolicy }}
+        - imagePullPolicy: {{ .Values.xyzYourchartDeployment.image.imagePullPolicy }}
           {{- if .Values.xyzYourchartDeployment.deployment.ports }}
           ports: {{ toYaml .Values.xyzYourchartDeployment.deployment.ports | nindent 12 }}
           {{- end }}
           livenessProbe: 
             httpGet: 
-              port: http
               path: /
+              port: http
           readinessProbe: 
             httpGet: 
               path: /
               port: http
-      serviceAccountName: {{ include "mychart.serviceAccountName" . }}
+          resources:
+            {{- toYaml .Values.deployment.resources | nindent 12 }}
+          name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.xyzYourchartDeployment.image.repository }}:{{ .Values.xyzYourchartDeployment.image.tag | default .Chart.AppVersion }}"
