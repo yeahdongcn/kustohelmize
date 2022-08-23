@@ -6,6 +6,46 @@
 
 Kustohelmize lets you easily create a Helm Chart from a [kustomized](https://github.com/kubernetes-sigs/kustomize) YAML file.
 
+## CLI
+
+kustohelmize
+
+```bash
+❯ ./kustohelmize
+From a YAML file, generate a Helm chart
+
+Usage:
+  kustohelmize [command]
+
+Available Commands:
+  completion  Generate the autocompletion script for the specified shell
+  create
+  help        Help about any command
+  version     print the client version information
+
+Flags:
+  -h, --help   help for kustohelmize
+
+Use "kustohelmize [command] --help" for more information about a command.
+```
+
+kustohelmize create
+
+```bash
+❯ ./kustohelmize create --help
+Usage:
+  kustohelmize create NAME [flags]
+
+Flags:
+  -a, --app-version string                     The version of the application enclosed inside of this chart
+  -d, --description string                     A one-sentence description of the chart
+  -f, --from string                            The path to a kustomized YAML file
+  -h, --help                                   help for create
+  -k, --kubernetes-split-yaml-command string   kubernetes-split-yaml command (path to executable) (default "kubernetes-split-yaml")
+  -p, --starter string                         the name or absolute path to Helm starter scaffold
+  -v, --version string                         A SemVer 2 conformant version string of the chart
+```
+
 ## User scenario
 
 ### Work with [kustomize](https://kustomize.io/).
