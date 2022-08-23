@@ -49,7 +49,7 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "create NAME",
-		Short: "",
+		Short: "Create a chart from a given YAML file",
 		Long:  ``,
 		Args:  require.ExactArgs(1),
 		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {

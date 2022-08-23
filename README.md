@@ -19,7 +19,7 @@ Usage:
 
 Available Commands:
   completion  Generate the autocompletion script for the specified shell
-  create
+  create      Create a chart from a given YAML file
   help        Help about any command
   version     print the client version information
 
