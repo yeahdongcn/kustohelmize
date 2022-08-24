@@ -38,4 +38,8 @@ const (
 	ifYAMLFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s: " +
 		leftDelimiter + "toYaml %s | nindent %d" + rightDelimiter + "\n" +
 		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
+
+	rangeFormat = "%s:\n" + leftDelimiterTrimSpaceTrailing + "range %s" + rightDelimiter + "\n" +
+		"  - name: " + leftDelimiter + "." + rightDelimiter + "\n" +
+		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
 )

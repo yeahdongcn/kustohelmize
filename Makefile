@@ -55,6 +55,7 @@ go-test:
 0100: build
 	bin/kustohelmize create --from=test/testdata/0100_deployment.yaml test/output/0100/mychart
 	helm install --dry-run xyz test/output/0100/mychart > test/output/0100/mychart.yaml
+	yq -i -P '... comments="" | sort_keys(..)' test/output/0100/mychart.yaml
 
 .PHONY: 0200
 0200: build

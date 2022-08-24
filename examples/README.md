@@ -249,4 +249,9 @@ We also introduce the `strategy` in the config file.
 
 7. `control-range`
 
-    TODO
+    ```
+    imagePullSecrets:
+    {{- range .Values.operator.initContainer.imagePullSecrets }}
+      - name: {{ . }}
+    {{- end }}
+    ```

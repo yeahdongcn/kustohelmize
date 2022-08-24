@@ -210,7 +210,13 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
 	case config.XPathStrategyControlRange:
-		p.logger.Info("ControlRange not implemented")
+		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
+		// {{- range .Values.imagePullSecrets }}
+		//   - name: {{ . }}
+		// {{- end }}
+		value := fmt.Sprintf(rangeFormat, v, key)
+		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
+		return true
 	default:
 		panic(fmt.Sprintf("Unknown XPath strategy: %s", xpathConfig.Strategy))
 	}

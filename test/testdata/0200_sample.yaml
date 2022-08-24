@@ -57,6 +57,7 @@ spec:
         app.kubernetes.io/name: yourchart
         app.kubernetes.io/instance: xyz
     spec:
+      imagePullSecrets: []
       serviceAccountName: xyz-yourchart
       securityContext:
         {}

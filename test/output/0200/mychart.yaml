@@ -1,5 +1,5 @@
 HOOKS:
-LAST DEPLOYED: Tue Aug 23 15:50:38 2022
+LAST DEPLOYED: Wed Aug 24 15:21:14 2022
 MANIFEST:
 NAME: xyz
 NAMESPACE: default
@@ -79,5 +79,7 @@ spec:
               port: http
           resources: {}
           securityContext: {}
+      imagePullSecrets:
+        - name: harbor-secret
       securityContext: {}
       serviceAccountName: xyz-mychart

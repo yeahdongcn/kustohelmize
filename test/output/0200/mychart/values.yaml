@@ -16,6 +16,8 @@ tolerations: {}
 
 xyzYourchartDeployment:
   deployment:
+    imagePullSecrets:
+    - harbor-secret
     ports:
     - containerPort: 80
       name: http
