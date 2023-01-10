@@ -116,12 +116,16 @@ func NewChartConfig(logger logr.Logger, chartname string) *ChartConfig {
 
 func (cc *ChartConfig) Values() (string, error) {
 	str := ""
+	var err error
+	var out []byte
 	// 1. SharedValues
-	out, err := yaml.Marshal(cc.SharedValues)
-	if err != nil {
-		return str, err
+	if len(cc.SharedValues) > 0 {
+		out, err := yaml.Marshal(cc.SharedValues)
+		if err != nil {
+			return str, err
+		}
+		str += fmt.Sprintf("%s\n", string(out))
 	}
-	str += fmt.Sprintf("%s\n", string(out))
 
 	// 2. FileConfig
 	root := GenericMap{}
