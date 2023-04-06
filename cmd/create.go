@@ -236,14 +236,15 @@ func (o *createOptions) run(out io.Writer) error {
 	var sb strings.Builder
 
 	for scanner.Scan() {
-		if o.version != "" && scanner.Text() == HELM_DEFAULT_CHART_VERSION {
+		text := scanner.Text()
+		if o.version != "" && text == HELM_DEFAULT_CHART_VERSION {
 			fmt.Fprintf(&sb, "version: %s\n", o.version)
-		} else if o.appVersion != "" && scanner.Text() == HELM_DEFAULT_APP_VERSION {
+		} else if o.appVersion != "" && text == HELM_DEFAULT_APP_VERSION {
 			fmt.Fprintf(&sb, "appVersion: \"%s\"\n", o.appVersion)
-		} else if o.description != "" && scanner.Text() == HELM_DEFAULT_DESCRIPTION {
+		} else if o.description != "" && text == HELM_DEFAULT_DESCRIPTION {
 			fmt.Fprintf(&sb, "description: %s\n", o.description)
 		} else {
-			fmt.Fprintln(&sb, scanner.Text())
+			fmt.Fprintln(&sb, text)
 		}
 	}
 	err = ioutil.WriteFile(chartfile, []byte(sb.String()), 0644)
