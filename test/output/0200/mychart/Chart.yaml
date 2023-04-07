@@ -1,6 +1,6 @@
 apiVersion: v2
 name: mychart
-description: "Helm chart for testing"
+description: Helm chart for testing
 
 # A chart can be either an 'application' or a 'library' chart.
 #
