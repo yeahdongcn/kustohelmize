@@ -20,7 +20,7 @@ var (
 		"name":    "1",
 		"image":   "2",
 		"command": "3",
-		"agrs":    "4",
+		"args":    "4",
 	}
 
 	metadataFirst = map[string]string{
