@@ -67,6 +67,12 @@ func (p *Processor) WithSuppressNamespace(suppress bool) *Processor {
 func (p *Processor) Process() error {
 	for source, fileConfig := range p.config.FileConfig {
 		filename := filepath.Base(source)
+
+		if p.suppressNamespace && util.IsNamespaceDefinition(filename) {
+			// Don't emit namespaces
+			continue
+		}
+
 		if util.IsCustomResourceDefinition(filename) {
 			if err := os.MkdirAll(p.crdsDir, 0755); err != nil {
 				p.logger.Error(err, "Failed to create CRD directory")
