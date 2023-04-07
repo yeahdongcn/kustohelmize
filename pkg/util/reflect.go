@@ -9,7 +9,9 @@ import (
 // Match xPath of containers/initContainers
 var (
 	containerPathRegex = regexp.MustCompile(`\.spec\.(init)?[cC]ontainers$`)
-	manifestFirst      = map[string]string{
+
+	// Order these keys first at top of manifest
+	manifestFirst = map[string]string{
 		"apiVersion": "1",
 		"kind":       "2",
 		"metadata":   "3",
@@ -23,6 +25,7 @@ var (
 		"args":    "4",
 	}
 
+	// Order these keys first at top of metadata
 	metadataFirst = map[string]string{
 		"name":      "1",
 		"namespace": "2",
