@@ -25,21 +25,43 @@ type context struct {
 }
 
 type Processor struct {
-	logger       logr.Logger
-	config       *config.ChartConfig
-	templatesDir string
-	crdsDir      string
+	logger            logr.Logger
+	config            *config.ChartConfig
+	templatesDir      string
+	crdsDir           string
+	suppressNamespace bool
 
 	context context
 }
 
-func NewProcessor(logger logr.Logger, config *config.ChartConfig, templatesDir, crdsDir string) *Processor {
-	return &Processor{
-		logger:       logger,
-		templatesDir: templatesDir,
-		crdsDir:      crdsDir,
-		config:       config,
-	}
+func NewProcessor() *Processor {
+	return &Processor{}
+}
+
+func (p *Processor) WithLogger(logger logr.Logger) *Processor {
+	p.logger = logger
+	return p
+}
+
+func (p *Processor) WithChartConfig(config *config.ChartConfig) *Processor {
+	p.config = config
+	return p
+
+}
+
+func (p *Processor) WithTemplatesDir(templatesDir string) *Processor {
+	p.templatesDir = templatesDir
+	return p
+}
+
+func (p *Processor) WithCrdsDir(crdsDir string) *Processor {
+	p.crdsDir = crdsDir
+	return p
+}
+
+func (p *Processor) WithSuppressNamespace(suppress bool) *Processor {
+	p.suppressNamespace = suppress
+	return p
 }
 
 func (p *Processor) Process() error {

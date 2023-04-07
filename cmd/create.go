@@ -13,7 +13,7 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
-	"github.com/yeahdongcn/kustohelmize/pkg/config"
+
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/template"
 	"github.com/yeahdongcn/kustohelmize/pkg/value"
@@ -43,6 +43,7 @@ type createOptions struct {
 	intermediateDir              string
 	enableIntermediateDirCleanup bool
 	config                       string
+	suppressNamespace            bool
 
 	// From helm.
 	starter    string // --starter
@@ -94,6 +95,7 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	cmd.Flags().StringVarP(&o.from, "from", "f", "", "The path to a kustomized YAML file")
 	cmd.MarkFlagRequired("from")
 	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
+	cmd.Flags().BoolVarP(&o.suppressNamespace, "suppress-namespace", "s", false, "Whether to suppress creation of namespace resource")
 	cmd.Flags().StringVarP(&o.intermediateDir, "intermediate-dir", "i", "", "The path to a intermediate directory")
 	cmd.Flags().MarkHidden("intermediate-dir")
 	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "", false, "Whether to cleanup the intermediate directory")
@@ -145,7 +147,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 			o.logger.Error(err, "Error reading config file", "path", path)
 			return nil, err
 		}
-		config := &config.ChartConfig{Logger: logger}
+		config := &cfg.ChartConfig{Logger: logger}
 		err = yaml.Unmarshal(out, config)
 		if err != nil {
 			o.logger.Error(err, "Error unmarshalling config file", "path", path)
@@ -157,7 +159,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	chartname := o.chartname()
 	config := cfg.NewChartConfig(logger, chartname)
 
-	c, err := os.ReadDir(o.intermediateDir)
+	c, _ := os.ReadDir(o.intermediateDir)
 	for _, entry := range c {
 		config.FileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
 	}
@@ -260,7 +262,13 @@ func (o *createOptions) run(out io.Writer) error {
 		return err
 	}
 
-	p := template.NewProcessor(o.logger.WithName("template"), config, filepath.Join(chartdir, chartutil.TemplatesDir), filepath.Join(chartdir, "crds"))
+	p := template.NewProcessor().
+		WithLogger(o.logger.WithName("template")).
+		WithChartConfig(config).
+		WithTemplatesDir(filepath.Join(chartdir, chartutil.TemplatesDir)).
+		WithCrdsDir(filepath.Join(chartdir, "crds")).
+		WithSuppressNamespace(o.suppressNamespace)
+
 	err = p.Process()
 	if err != nil {
 		o.logger.Error(err, "Error processing templates")
