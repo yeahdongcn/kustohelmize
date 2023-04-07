@@ -192,6 +192,26 @@ func (o *createOptions) run(out io.Writer) error {
 		APIVersion:  chart.APIVersionV2,
 	}
 
+	chartdir := filepath.Join(chartroot, chartname)
+
+	// If _helpers.tpl exists, back it up
+	var helpers []byte = nil
+
+	helperFile := filepath.Join(chartdir, chartutil.HelpersName)
+	f, err := os.Open(helperFile)
+
+	if err == nil {
+		helpers, _ = io.ReadAll(f)
+		f.Close()
+
+		defer func() {
+			err := os.WriteFile(helperFile, helpers, 0664)
+			if err != nil {
+				o.logger.Error(err, "Unable to restore _helpers.tpl")
+			}
+		}()
+	}
+
 	if o.starter != "" {
 		// Create from the starter
 		lstarter := filepath.Join(o.starterDir, o.starter)
@@ -209,7 +229,6 @@ func (o *createOptions) run(out io.Writer) error {
 		return err
 	}
 
-	chartdir := filepath.Join(chartroot, chartname)
 	files := []string{
 		filepath.Join(chartdir, chartutil.IngressFileName),
 		filepath.Join(chartdir, chartutil.DeploymentName),
