@@ -324,6 +324,12 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			}
 		}
 	default:
+		if p.suppressNamespace && strings.HasSuffix(string(root), "metadata.namespace") {
+			// Use helm's idea of what the namespace is
+			fmt.Fprintf(p.context.out, singleValueFormat, ".Release.Namespace")
+			fmt.Fprintln(p.context.out)
+			return
+		}
 		// spec.template.spec.nodeSelector: Invalid type. Expected: [string,null], given: boolean
 		if v.Kind() == reflect.Invalid {
 			fmt.Fprintln(p.context.out, "null")
