@@ -220,8 +220,6 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 	default:
 		panic(fmt.Sprintf("Unknown XPath strategy: %s", xpathConfig.Strategy))
 	}
-
-	return false
 }
 
 func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
@@ -282,7 +280,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			fmt.Fprintln(p.context.out)
 		}
 		hasSliceIndex := sliceIndex != config.XPathSliceIndexNone
-		for _, k := range v.MapKeys() {
+		for _, k := range util.SortedMapKeys(v, string(root)) {
 			mapKey := util.ReflectValue(k).String()
 			xpath := root.NewChild(mapKey, sliceIndex)
 			if !p.processMap(k, nindent, xpath, &hasSliceIndex) {

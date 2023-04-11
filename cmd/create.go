@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
@@ -21,6 +22,13 @@ import (
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"
 	"helm.sh/helm/v3/pkg/helmpath"
+)
+
+const (
+	// Helm Chart.yaml defaults
+	HELM_DEFAULT_CHART_VERSION = "version: 0.1.0"
+	HELM_DEFAULT_APP_VERSION   = "appVersion: \"1.16.0\""
+	HELM_DEFAULT_DESCRIPTION   = "description: A Helm chart for Kubernetes"
 )
 
 type createOptions struct {
@@ -225,19 +233,21 @@ func (o *createOptions) run(out io.Writer) error {
 		return err
 	}
 	scanner := bufio.NewScanner(bytes.NewReader(ins))
-	outs := ""
+	var sb strings.Builder
+
 	for scanner.Scan() {
-		if o.version != "" && scanner.Text() == "version: 0.1.0" {
-			outs += fmt.Sprintf("version: %s\n", o.version)
-		} else if o.appVersion != "" && scanner.Text() == "appVersion: \"1.16.0\"" {
-			outs += fmt.Sprintf("appVersion: \"%s\"\n", o.appVersion)
-		} else if o.description != "" && scanner.Text() == "description: A Helm chart for Kubernetes" {
-			outs += fmt.Sprintf("description: %s\n", o.description)
+		text := scanner.Text()
+		if o.version != "" && text == HELM_DEFAULT_CHART_VERSION {
+			fmt.Fprintf(&sb, "version: %s\n", o.version)
+		} else if o.appVersion != "" && text == HELM_DEFAULT_APP_VERSION {
+			fmt.Fprintf(&sb, "appVersion: \"%s\"\n", o.appVersion)
+		} else if o.description != "" && text == HELM_DEFAULT_DESCRIPTION {
+			fmt.Fprintf(&sb, "description: %s\n", o.description)
 		} else {
-			outs += scanner.Text() + "\n"
+			fmt.Fprintln(&sb, text)
 		}
 	}
-	err = ioutil.WriteFile(chartfile, []byte(outs), 0644)
+	err = ioutil.WriteFile(chartfile, []byte(sb.String()), 0644)
 	if err != nil {
 		o.logger.Error(err, "Error writing chartfile")
 		return err
