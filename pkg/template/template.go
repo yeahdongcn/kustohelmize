@@ -343,6 +343,11 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 		}
 		s := v.String()
 		if p.suppressNamespace && roleSubjectRegex.MatchString(string(root)) && s == "ServiceAccount" {
+			// This is a bit mucky.
+			// Here we are inside a subjects block of a role/customrole binding.
+			// It is for a service account.
+			// Order of keys is guaranteed.
+			// Therefore we know that the next 'namespace' key encountered will be for this subject.
 			p.context.setRoleNamespace = true
 		}
 		p.logger.V(10).Info("Processing others", "root", root, "s", s)
