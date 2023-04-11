@@ -196,10 +196,8 @@ func (o *createOptions) run(out io.Writer) error {
 
 	// If _helpers.tpl exists, back it up
 	var helpers []byte = nil
-
 	helperFile := filepath.Join(chartdir, chartutil.HelpersName)
 	f, err := os.Open(helperFile)
-
 	if err == nil {
 		helpers, _ = io.ReadAll(f)
 		f.Close()
@@ -207,7 +205,7 @@ func (o *createOptions) run(out io.Writer) error {
 		defer func() {
 			err := os.WriteFile(helperFile, helpers, 0664)
 			if err != nil {
-				o.logger.Error(err, "Unable to restore _helpers.tpl")
+				o.logger.Error(err, "Error restoring _helpers.tpl")
 			}
 		}()
 	}
