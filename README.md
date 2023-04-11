@@ -10,7 +10,7 @@ Kustohelmize lets you easily create a Helm Chart from a [kustomized](https://git
 
 kustohelmize
 
-```bash
+```
 ❯ ./kustohelmize
 From a YAML file, generate a Helm chart
 
@@ -31,7 +31,7 @@ Use "kustohelmize [command] --help" for more information about a command.
 
 kustohelmize create
 
-```bash
+```
 ❯ ./kustohelmize create --help
 Usage:
   kustohelmize create NAME [flags]
@@ -43,6 +43,7 @@ Flags:
   -h, --help                                   help for create
   -k, --kubernetes-split-yaml-command string   kubernetes-split-yaml command (path to executable) (default "kubernetes-split-yaml")
   -p, --starter string                         the name or absolute path to Helm starter scaffold
+  -s, --suppress-namespace                     Whether to suppress creation of namespace resource, which Kustomize will emit. RBAC bindings for SAs will be to {{ .Release.Namespace }}
   -v, --version string                         A SemVer 2 conformant version string of the chart
 ```
 
