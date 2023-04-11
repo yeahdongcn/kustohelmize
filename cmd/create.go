@@ -95,7 +95,7 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	cmd.Flags().StringVarP(&o.from, "from", "f", "", "The path to a kustomized YAML file")
 	cmd.MarkFlagRequired("from")
 	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
-	cmd.Flags().BoolVarP(&o.suppressNamespace, "suppress-namespace", "s", false, "Whether to suppress creation of namespace resource")
+	cmd.Flags().BoolVarP(&o.suppressNamespace, "suppress-namespace", "s", false, "Whether to suppress creation of namespace resource, which Kustomize will emit. RBAC bindings for SAs will be to {{ .Release.Namespace }}")
 	cmd.Flags().StringVarP(&o.intermediateDir, "intermediate-dir", "i", "", "The path to a intermediate directory")
 	cmd.Flags().MarkHidden("intermediate-dir")
 	cmd.Flags().BoolVarP(&o.enableIntermediateDirCleanup, "cleanup", "", false, "Whether to cleanup the intermediate directory")
