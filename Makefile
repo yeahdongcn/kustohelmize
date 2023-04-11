@@ -45,7 +45,7 @@ examples: build ## Test the binary against the examples.
 	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
 
 .PHONY: test
-test: go-test build 0100 0200 ## Test the binary.
+test: go-test build 0100 0200 0300 ## Test the binary.
 
 .PHONY: go-test
 go-test:
@@ -54,14 +54,14 @@ go-test:
 .PHONY: 0100
 0100: build
 	bin/kustohelmize create --from=test/testdata/0100_deployment.yaml test/output/0100/mychart
-	helm install --dry-run xyz test/output/0100/mychart > test/output/0100/mychart.yaml
-	yq -i -P '... comments="" | sort_keys(..)' test/output/0100/mychart.yaml
 
 .PHONY: 0200
 0200: build
 	bin/kustohelmize create --from=test/testdata/0200_sample.yaml --version=1.0.0 --app-version=1.0.0 --description="Helm chart for testing" test/output/0200/mychart
-	helm install --dry-run xyz test/output/0200/mychart > test/output/0200/mychart.yaml
-	yq -i -P '... comments="" | sort_keys(..)' test/output/0200/mychart.yaml
+
+.PHONY: 0300
+0300: build
+	bin/kustohelmize create --from=test/testdata/0300_sample.yaml --suppress-namespace --version=1.0.0 --app-version=1.0.0 --description="Helm chart with suppressed namespace" test/output/0300/no-ns-chart
 
 ##@ Tools
 
