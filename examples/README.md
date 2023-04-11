@@ -78,6 +78,7 @@ fileConfig:
     - strategy: inline
       key: manager.image.tag
       value: latest
+      defaultValue: .Chart.AppVersion
     spec.template.spec.containers[1].name:
     - strategy: newline
       key: manager.name

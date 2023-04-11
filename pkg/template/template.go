@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -19,32 +20,63 @@ import (
 )
 
 type context struct {
-	out        io.Writer
-	prefix     string
-	fileConfig config.Config
+	out              io.Writer
+	prefix           string
+	fileConfig       config.Config
+	setRoleNamespace bool
 }
 
 type Processor struct {
-	logger       logr.Logger
-	config       *config.ChartConfig
-	templatesDir string
-	crdsDir      string
+	logger            logr.Logger
+	config            *config.ChartConfig
+	templatesDir      string
+	crdsDir           string
+	suppressNamespace bool
 
 	context context
 }
 
-func NewProcessor(logger logr.Logger, config *config.ChartConfig, templatesDir, crdsDir string) *Processor {
-	return &Processor{
-		logger:       logger,
-		templatesDir: templatesDir,
-		crdsDir:      crdsDir,
-		config:       config,
-	}
+var roleSubjectRegex = regexp.MustCompile(`subjects\[\d+\].kind`)
+
+func NewProcessor() *Processor {
+	return &Processor{}
+}
+
+func (p *Processor) WithLogger(logger logr.Logger) *Processor {
+	p.logger = logger
+	return p
+}
+
+func (p *Processor) WithChartConfig(config *config.ChartConfig) *Processor {
+	p.config = config
+	return p
+
+}
+
+func (p *Processor) WithTemplatesDir(templatesDir string) *Processor {
+	p.templatesDir = templatesDir
+	return p
+}
+
+func (p *Processor) WithCrdsDir(crdsDir string) *Processor {
+	p.crdsDir = crdsDir
+	return p
+}
+
+func (p *Processor) WithSuppressNamespace(suppress bool) *Processor {
+	p.suppressNamespace = suppress
+	return p
 }
 
 func (p *Processor) Process() error {
 	for source, fileConfig := range p.config.FileConfig {
 		filename := filepath.Base(source)
+
+		if p.suppressNamespace && util.IsNamespaceDefinition(filename) {
+			// Don't emit namespaces
+			continue
+		}
+
 		if util.IsCustomResourceDefinition(filename) {
 			if err := os.MkdirAll(p.crdsDir, 0755); err != nil {
 				p.logger.Error(err, "Failed to create CRD directory")
@@ -84,9 +116,10 @@ func (p *Processor) Process() error {
 		}
 
 		p.context = context{
-			out:        file,
-			prefix:     util.LowerCamelFilenameWithoutExt(filename),
-			fileConfig: fileConfig,
+			out:              file,
+			prefix:           util.LowerCamelFilenameWithoutExt(filename),
+			fileConfig:       fileConfig,
+			setRoleNamespace: false,
 		}
 		d := reflect.ValueOf(data)
 		p.walk(d, 0, config.XPathRoot, config.XPathSliceIndexNone)
@@ -296,12 +329,22 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			}
 		}
 	default:
+		if p.suppressNamespace && (strings.HasSuffix(string(root), "metadata.namespace") || (p.context.setRoleNamespace && strings.HasSuffix(string(root), "namespace"))) {
+			// Use helm's idea of what the namespace is
+			fmt.Fprintf(p.context.out, singleValueFormat, ".Release.Namespace")
+			fmt.Fprintln(p.context.out)
+			p.context.setRoleNamespace = false
+			return
+		}
 		// spec.template.spec.nodeSelector: Invalid type. Expected: [string,null], given: boolean
 		if v.Kind() == reflect.Invalid {
 			fmt.Fprintln(p.context.out, "null")
 			return
 		}
 		s := v.String()
+		if p.suppressNamespace && roleSubjectRegex.MatchString(string(root)) && s == "ServiceAccount" {
+			p.context.setRoleNamespace = true
+		}
 		p.logger.V(10).Info("Processing others", "root", root, "s", s)
 		if s == "true" || s == "false" {
 			fmt.Fprintf(p.context.out, "\"%s\"\n", v)
