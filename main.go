@@ -13,7 +13,7 @@ func main() {
 	opts := zap.Options{
 		Development: true,
 		Level:       zapcore.Level(-10),
-		TimeEncoder: zapcore.RFC3339TimeEncoder,
+		TimeEncoder: zapcore.ISO8601TimeEncoder,
 	}
 	opts.BindFlags(flag.CommandLine)
 	flag.Parse()
