@@ -140,3 +140,102 @@ func TestValues(t *testing.T) {
 	require.NoError(t, err)
 	require.GreaterOrEqual(t, len(values), 1)
 }
+
+func TestValidateGlobalConfigCannotHaveRootLevelEntry(t *testing.T) {
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
+
+	config.GlobalConfig = Config{
+		"": []XPathConfig{
+			{
+				Strategy: XPathStrategyControlIf,
+				Key:      "dont.care",
+				Value:    "dont-care",
+			},
+		},
+	}
+
+	err := config.Validate()
+	require.Error(t, err)
+}
+
+type errFunc func(require.TestingT, error, ...interface{})
+
+func TestValidateRootFileConfigCanOnlyUseFileIf(t *testing.T) {
+
+	tests := map[XPathStrategy]errFunc{
+		XPathStrategyInline:        require.Error,
+		XPathStrategyInlineYAML:    require.Error,
+		XPathStrategyNewline:       require.Error,
+		XPathStrategyNewlineYAML:   require.Error,
+		XPathStrategyControlIf:     require.Error,
+		XPathStrategyControlIfYAML: require.Error,
+		XPathStrategyControlWith:   require.Error,
+		XPathStrategyControlRange:  require.Error,
+		XPathStrategyFileIf:        require.NoError,
+	}
+
+	logger := zap.New()
+
+	for testCase, checkFunc := range tests {
+		t.Run(string(testCase), func(t *testing.T) {
+			config := NewChartConfig(logger, "chart")
+
+			config.FileConfig["daemonset.yaml"] = Config{
+				"abc": []XPathConfig{
+					{
+						Strategy: XPathStrategyInline,
+						Key:      "image.repository",
+						Value:    "nginx",
+					},
+				},
+				"": []XPathConfig{
+					{
+						Strategy: testCase,
+						Key:      "dont.care",
+						Value:    "dont-care",
+					},
+				},
+			}
+
+			err := config.Validate()
+			checkFunc(t, err)
+		})
+	}
+}
+
+func TestValidateNonRootFileConfigCannotUseFileIf(t *testing.T) {
+
+	tests := map[XPathStrategy]errFunc{
+		XPathStrategyInline:        require.NoError,
+		XPathStrategyInlineYAML:    require.NoError,
+		XPathStrategyNewline:       require.NoError,
+		XPathStrategyNewlineYAML:   require.NoError,
+		XPathStrategyControlIf:     require.NoError,
+		XPathStrategyControlIfYAML: require.NoError,
+		XPathStrategyControlWith:   require.NoError,
+		XPathStrategyControlRange:  require.NoError,
+		XPathStrategyFileIf:        require.Error,
+	}
+
+	logger := zap.New()
+
+	for testCase, checkFunc := range tests {
+		t.Run(string(testCase), func(t *testing.T) {
+			config := NewChartConfig(logger, "chart")
+
+			config.FileConfig["daemonset.yaml"] = Config{
+				"abc": []XPathConfig{
+					{
+						Strategy: testCase,
+						Key:      "image.repository",
+						Value:    "nginx",
+					},
+				},
+			}
+
+			err := config.Validate()
+			checkFunc(t, err)
+		})
+	}
+}

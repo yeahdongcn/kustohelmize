@@ -203,27 +203,27 @@ We also introduce the `strategy` in the config file.
     namespace: {{ .Values.namespace }}
     ```
 
-2. `inline-yaml`
+1. `inline-yaml`
 
     ```yaml
     namespace: {{ toYaml .Values.namespace }}
     ```
 
-3. `newline`
+1. `newline`
 
     ```yaml
     - name:
       {{ .Values.memcachedOperatorControllerManagerDeployment.manager.name | nindent 12 }}
     ```
 
-4. `newline-yaml`
+1. `newline-yaml`
 
     ```yaml
     - name:
       {{ toYaml .Values.memcachedOperatorControllerManagerDeployment.manager.name | nindent 12 }}
     ```
 
-5. `control-with`
+1. `control-with`
 
     ```
     {{- with .Values.resources }}
@@ -232,7 +232,7 @@ We also introduce the `strategy` in the config file.
     {{- end }}
     ```
 
-6. `control-if`
+1. `control-if`
 
     ```
     {{- if .Values.operator.initContainer.imagePullPolicy }}
@@ -240,7 +240,7 @@ We also introduce the `strategy` in the config file.
     {{- end }}
     ```
 
-6. `control-if-yaml`
+1. `control-if-yaml`
 
     ```
     {{- if .Values.operator.initContainer.imagePullSecrets }}
@@ -248,11 +248,38 @@ We also introduce the `strategy` in the config file.
     {{- end }}
     ```
 
-7. `control-range`
+1. `control-range`
 
     ```
     imagePullSecrets:
     {{- range .Values.operator.initContainer.imagePullSecrets }}
       - name: {{ . }}
     {{- end }}
+    ```
+
+1.  `file-if`
+
+    Conditionally includes or omits an entire resource manifest.
+
+    ```
+    {{- if .Values.prometheus.enabled }}
+    # Entire ServiceMonitor manifest
+    {{- end }}
+    ```
+
+    First, update `sharedValues` in the chart config file to add the switch
+
+    ```yaml
+    sharedValues:
+      prometheus:
+        enabled: true
+    ```
+
+    `file-if` must be provided as a root level configuration (empty XPath) in a `fileConfig` like this. It is an error to use it anywhere else.
+
+    ```yaml
+    path/to/my-operator-servicemonitor.yaml:
+      "":
+      - strategy: file-if
+        key: sharedValues.promethues.enabled
     ```

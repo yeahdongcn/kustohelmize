@@ -250,6 +250,10 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		value := fmt.Sprintf(rangeFormat, v, key)
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
+	case config.XPathStrategyFileIf:
+		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
+		fmt.Fprintf(p.context.out, fileIfFormat, key)
+		return true
 	default:
 		panic(fmt.Sprintf("Unknown XPath strategy: %s", xpathConfig.Strategy))
 	}
@@ -278,6 +282,15 @@ func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath,
 }
 
 func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceIndex int) {
+
+	if root.IsRoot() {
+		// Process root level map for existence of file-if
+		hasSliceIndex := false
+		if p.processMap(reflect.ValueOf(""), 0, root, &hasSliceIndex) {
+			defer fmt.Fprintln(p.context.out, endDelimited)
+		}
+	}
+
 	v = util.ReflectValue(v)
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:

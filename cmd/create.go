@@ -153,6 +153,11 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 			o.logger.Error(err, "Error unmarshalling config file", "path", path)
 			return nil, err
 		}
+		err = config.Validate()
+		if err != nil {
+			o.logger.Error(err, "Error validating config file", "path", path)
+			return nil, err
+		}
 		return config, nil
 	}
 
