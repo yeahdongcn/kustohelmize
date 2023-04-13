@@ -2,6 +2,8 @@
 affinity: {}
 nodeSelector: {}
 podSecurityContext: {}
+prometheus:
+  enabled: true
 resources: {}
 securityContext: {}
 tolerations: {}
@@ -12,4 +14,5 @@ myNamespaceNamespace: {}
 myRoleRole: {}
 myRolebindingRb: {}
 myServiceAccountSa: {}
+sample0300ControllerManagerMetricsMonitorServicemonitor: {}
 

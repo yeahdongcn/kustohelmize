@@ -18,6 +18,7 @@ const (
 )
 
 const (
+	endDelimited          = leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
 	singleLineKeyFormat   = "%s: "
 	singleValueFormat     = leftDelimiter + "%s" + rightDelimiter
 	singleYAMLValueFormat = leftDelimiter + "toYaml %s" + rightDelimiter
@@ -30,16 +31,17 @@ const (
 
 	withFormat = leftDelimiterTrimSpaceTrailing + "with %s" + rightDelimiter + "\n%s:\n" +
 		"  " + leftDelimiterTrimSpaceTrailing + "toYaml . | nindent %d" + rightDelimiter + "\n" +
-		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
+		endDelimited
 
 	ifFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s: " +
 		leftDelimiter + "%s" + rightDelimiter + "\n" +
-		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
+		endDelimited
 	ifYAMLFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s: " +
 		leftDelimiter + "toYaml %s | nindent %d" + rightDelimiter + "\n" +
-		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
+		endDelimited
+	fileIfFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n"
 
 	rangeFormat = "%s:\n" + leftDelimiterTrimSpaceTrailing + "range %s" + rightDelimiter + "\n" +
 		"  - name: " + leftDelimiter + "." + rightDelimiter + "\n" +
-		leftDelimiterTrimSpaceTrailing + "end" + rightDelimiter
+		endDelimited
 )

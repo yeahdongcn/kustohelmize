@@ -36,6 +36,7 @@ const (
 	XPathStrategyControlIfYAML XPathStrategy = "control-if-yaml"
 	XPathStrategyControlWith   XPathStrategy = "control-with"
 	XPathStrategyControlRange  XPathStrategy = "control-range"
+	XPathStrategyFileIf        XPathStrategy = "file-if"
 )
 
 type XPathConfig struct {
@@ -213,6 +214,27 @@ func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix st
 		key = fmt.Sprintf("%s | default %s", key, xc.DefaultValue)
 	}
 	return key, keyType
+}
+
+func (c *ChartConfig) Validate() error {
+	// Currently validate that file-if can only be present at root level file configs
+	// and that globalConfig cannot contain a root level entry
+	if _, ok := c.GlobalConfig[XPathRoot]; ok {
+		return fmt.Errorf("cannot have root level config in GlobalConfig")
+	}
+
+	for manifest, config := range c.FileConfig {
+		for xpath, xpathConfigs := range config {
+			for _, xpathConfig := range xpathConfigs {
+				strategy := xpathConfig.Strategy
+				if (xpath == XPathRoot) != (strategy == XPathStrategyFileIf) {
+					return fmt.Errorf("'%s' cannot use strategy '%s' at '%s'", manifest, strategy, xpath)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 func (c *ChartConfig) keyExist(key string) (string, bool) {

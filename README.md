@@ -83,6 +83,8 @@ Then a Helm chart with default configurations will be created for you. The direc
 
 The full example from scratch can be found at [examples](https://github.com/yeahdongcn/kustohelmize/tree/main/examples).
 
+Note that you can use this tool in an ad-hoc manner against any YAML file containing multiple resources to generate a helm chart skeleton simply by pointing `--from` at that file.
+
 ## Community
 
 * [Open an issue](https://github.com/yeahdongcn/kustohelmize/issues/new)
