@@ -2,10 +2,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata: 
+  name: memcached-operator-controller-manager
   namespace: {{ .Values.namespace }}
   labels:
     {{- include "memcached-operator.labels" . | nindent 4 }}
-  name: memcached-operator-controller-manager
 spec: 
   replicas: {{ .Values.memcachedOperatorControllerManagerDeployment.replicas }}
   selector: 
@@ -13,60 +13,60 @@ spec:
       control-plane: controller-manager
   template: 
     metadata: 
-      labels: 
-        control-plane: controller-manager
       annotations: 
         kubectl.kubernetes.io/default-container: manager
+      labels: 
+        control-plane: controller-manager
     spec: 
-      serviceAccountName: memcached-operator-controller-manager
-      terminationGracePeriodSeconds: 10
       containers:         
-        - securityContext: 
-            allowPrivilegeEscalation: false
+        - name: kube-rbac-proxy
+          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.11.0
           args: 
             - --secure-listen-address=0.0.0.0:8443
             - --upstream=http://127.0.0.1:8080/
             - --logtostderr=true
             - --v=0
-          image: gcr.io/kubebuilder/kube-rbac-proxy:v0.11.0
-          name: kube-rbac-proxy
           ports:             
             - containerPort: 8443
               name: https
               protocol: TCP
           resources: 
             limits: 
-              memory: 128Mi
               cpu: 500m
+              memory: 128Mi
             requests: 
               cpu: 5m
               memory: 64Mi
-        - name:
-            {{- .Values.memcachedOperatorControllerManagerDeployment.manager.name | nindent 12 }}
-          readinessProbe: 
-            periodSeconds: 10
-            httpGet: 
-              path: /readyz
-              port: 8081
-            initialDelaySeconds: 5
-          {{- with .Values.resources }}
-          resources:
-            {{- toYaml . | nindent 12 }}
-          {{- end }}
           securityContext: 
             allowPrivilegeEscalation: false
+        - name:
+            {{- .Values.memcachedOperatorControllerManagerDeployment.manager.name | nindent 12 }}
+          image: "{{ .Values.memcachedOperatorControllerManagerDeployment.manager.image.repository }}:{{ .Values.memcachedOperatorControllerManagerDeployment.manager.image.tag }}"
+          command: 
+            - /manager
           args: 
             - --health-probe-bind-address=:8081
             - --metrics-bind-address=127.0.0.1:8080
             - --leader-elect
-          command: 
-            - /manager
-          image: "{{ .Values.memcachedOperatorControllerManagerDeployment.manager.image.repository }}:{{ .Values.memcachedOperatorControllerManagerDeployment.manager.image.tag }}"
           livenessProbe: 
             httpGet: 
               path: /healthz
               port: 8081
             initialDelaySeconds: 15
             periodSeconds: 20
+          readinessProbe: 
+            httpGet: 
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- with .Values.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          securityContext: 
+            allowPrivilegeEscalation: false
       securityContext: 
         runAsNonRoot: true
+      serviceAccountName: memcached-operator-controller-manager
+      terminationGracePeriodSeconds: 10

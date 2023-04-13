@@ -4,8 +4,8 @@ kind: ClusterRoleBinding
 metadata: 
   name: memcached-operator-manager-rolebinding
 roleRef: 
-  apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
+  apiGroup: rbac.authorization.k8s.io
   name: memcached-operator-manager-role
 subjects:   
   - kind: ServiceAccount
