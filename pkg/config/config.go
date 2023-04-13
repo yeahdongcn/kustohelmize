@@ -227,15 +227,8 @@ func (c *ChartConfig) Validate() error {
 		for xpath, xpathConfigs := range config {
 			for _, xpathConfig := range xpathConfigs {
 				strategy := xpathConfig.Strategy
-				if xpath == XPathRoot && strategy != XPathStrategyFileIf {
-					// Must only be file-if when path is root.
-					// with or range might be valid here one day to create multiple
-					// instances of the same kind with slightly different properties.
-					return fmt.Errorf("'%s' cannot use strategy '%s' at root level", manifest, strategy)
-				}
-				if xpath != XPathRoot && strategy == XPathStrategyFileIf {
-					// Must not be file-if when path isn't root
-					return fmt.Errorf("'%s' cannot use strategy '%s' at non-root level", manifest, strategy)
+				if (xpath == XPathRoot) != (strategy == XPathStrategyFileIf) {
+					return fmt.Errorf("'%s' cannot use strategy '%s' at '%s'", manifest, strategy, xpath)
 				}
 			}
 		}
