@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/dlclark/regexp2"
 	"github.com/go-logr/logr"
 	"github.com/yeahdongcn/kustohelmize/internal/third_party/dep/fs"
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
@@ -149,16 +150,72 @@ func indentsFromSlice(s string, n int, fromSlice bool) string {
 	return indented
 }
 
-func (p *Processor) processSlice(v reflect.Value, nindent int) {
+// Emit a scalar slice value
+func (p *Processor) printSliceScalar(str string, nindent int) {
+	if str == "" {
+		fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- \"%s\"", str), nindent))
+	} else if str == "*" {
+		fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- '%s'", str), nindent))
+	} else {
+		fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- %s", str), nindent))
+	}
+
+}
+
+// Perform regex substitution. Die if the regex system errors
+func mustReplace(rx *regexp2.Regexp, str string, replacement string) string {
+	replaced, err := rx.ReplaceFunc(str, func(m regexp2.Match) string {
+		// No additional checking here as existience of only one capture group already asserted.
+		groups := m.Groups()
+		str0 := groups[0].String()    // The whole matched string
+		cap1 := groups[1].Captures[0] // The capture group
+
+		// Replace 'replacement' into str0 at the indices indicated by cap1
+		prefix := str0[0:cap1.Index]
+		suffix := str0[cap1.Index+cap1.Length:]
+
+		return prefix + replacement + suffix
+	}, -1, -1)
+
+	if err != nil {
+		panic(err)
+	}
+
+	return replaced
+}
+
+// Process a slice of scalars
+func (p *Processor) processSlice(v reflect.Value, xpath config.XPath, nindent int) {
+	xpathConfigs := p.context.fileConfig[xpath]
 	for i := 0; i < v.Len(); i++ {
 		item := util.ReflectValue(v.Index(i))
 		str := item.String()
-		if str == "" {
-			fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- \"%s\"", item), nindent))
-		} else if str == "*" {
-			fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- '%s'", item), nindent))
+		if len(xpathConfigs) == 0 {
+			p.printSliceScalar(str, nindent)
 		} else {
-			fmt.Fprintln(p.context.out, indent(fmt.Sprintf("- %s", item), nindent))
+			for _, xpathConfig := range xpathConfigs {
+				if xpathConfig.Strategy != config.XPathStrategyInlineRegex {
+					continue
+				}
+				rx := xpathConfig.RegexCompiled
+				if matched, _ := rx.MatchString(str); !matched {
+					continue
+				}
+				// Match against xpathconfig.RegexCompiled and do replacement.
+				var value string
+				key, keyType := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
+				if keyType.IsHelpersType() {
+					// name: {{ include "mychart.fullname" . }}
+					value = fmt.Sprintf(singleIncludeFormat, key)
+				} else {
+					// imagePullPolicy: {{ .Values.image.pullPolicy }}
+					value = fmt.Sprintf(singleValueFormat, key)
+				}
+				// Replace now
+				str = mustReplace(rx, str, value)
+				break
+			}
+			p.printSliceScalar(str, nindent)
 		}
 	}
 }
@@ -254,6 +311,9 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
 		fmt.Fprintf(p.context.out, fileIfFormat, key)
 		return true
+	case config.XPathStrategyInlineRegex:
+		// Processed by slice
+		return false
 	default:
 		panic(fmt.Sprintf("Unknown XPath strategy: %s", xpathConfig.Strategy))
 	}
@@ -308,7 +368,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			fmt.Fprintln(p.context.out)
 		}
 		if !keepWalking {
-			p.processSlice(v, nindent)
+			p.processSlice(v, root, nindent)
 		} else {
 			for i := 0; i < v.Len(); i++ {
 				if i == 0 {

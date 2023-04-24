@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/dlclark/regexp2"
 	"github.com/go-logr/logr"
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
 	"github.com/yeahdongcn/kustohelmize/pkg/util"
@@ -37,13 +38,16 @@ const (
 	XPathStrategyControlWith   XPathStrategy = "control-with"
 	XPathStrategyControlRange  XPathStrategy = "control-range"
 	XPathStrategyFileIf        XPathStrategy = "file-if"
+	XPathStrategyInlineRegex   XPathStrategy = "inline-regex"
 )
 
 type XPathConfig struct {
-	Strategy     XPathStrategy `yaml:"strategy"`
-	Key          string        `yaml:"key"`
-	Value        interface{}   `yaml:"value,omitempty"`
-	DefaultValue interface{}   `yaml:"defaultValue,omitempty"`
+	Strategy      XPathStrategy   `yaml:"strategy"`
+	Key           string          `yaml:"key"`
+	Value         interface{}     `yaml:"value,omitempty"`
+	DefaultValue  interface{}     `yaml:"defaultValue,omitempty"`
+	Regex         string          `yaml:"regex,omitempty"`
+	RegexCompiled *regexp2.Regexp `yaml:"-"`
 }
 
 type XPathConfigs []XPathConfig
@@ -225,10 +229,21 @@ func (c *ChartConfig) Validate() error {
 
 	for manifest, config := range c.FileConfig {
 		for xpath, xpathConfigs := range config {
-			for _, xpathConfig := range xpathConfigs {
+			for i, xpathConfig := range xpathConfigs {
 				strategy := xpathConfig.Strategy
 				if (xpath == XPathRoot) != (strategy == XPathStrategyFileIf) {
 					return fmt.Errorf("'%s' cannot use strategy '%s' at '%s'", manifest, strategy, xpath)
+				}
+				if strategy == XPathStrategyInlineRegex {
+					if xpathConfig.Regex == "" {
+						return fmt.Errorf("'%s' strategy '%s' must have 'regex' property", manifest, strategy)
+					}
+					rx := regexp2.MustCompile(xpathConfig.Regex, regexp2.Compiled)
+					if len(rx.GetGroupNumbers()) != 2 {
+						// groups[0] is the entire match. groups[1] is the bit within ()
+						return fmt.Errorf("'%s' strategy '%s': regular expression '%s' must have exactly one replacement group", manifest, strategy, xpathConfig.Regex)
+					}
+					xpathConfigs[i].RegexCompiled = rx
 				}
 			}
 		}

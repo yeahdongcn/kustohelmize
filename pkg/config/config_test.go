@@ -239,3 +239,70 @@ func TestValidateNonRootFileConfigCannotUseFileIf(t *testing.T) {
 		})
 	}
 }
+
+func TestRegexStrategyMustHaveRegexProperty(t *testing.T) {
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
+
+	config.FileConfig["daemonset.yaml"] = Config{
+		"abc": []XPathConfig{
+			{
+				Strategy: XPathStrategyInlineRegex,
+				Key:      "spec.template.spec.containers[0].args",
+			},
+		},
+	}
+
+	require.Error(t, config.Validate())
+}
+
+func TestRegexStrategyWithoutCaptureGroupFails(t *testing.T) {
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
+
+	config.FileConfig["daemonset.yaml"] = Config{
+		"abc": []XPathConfig{
+			{
+				Strategy: XPathStrategyInlineRegex,
+				Key:      "spec.template.spec.containers[0].args",
+				Regex:    `--metrics-bind-address=127.0.0.1:8882`,
+			},
+		},
+	}
+
+	require.Error(t, config.Validate())
+}
+
+func TestRegexStrategyWithMoreThanOneCaptureGroupFails(t *testing.T) {
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
+
+	config.FileConfig["daemonset.yaml"] = Config{
+		"abc": []XPathConfig{
+			{
+				Strategy: XPathStrategyInlineRegex,
+				Key:      "spec.template.spec.containers[0].args",
+				Regex:    `--metrics-bind-address=127.0.0.1:(\d)(\d)`,
+			},
+		},
+	}
+
+	require.Error(t, config.Validate())
+}
+
+func TestRegexStrategyWithOnlyOneCaptureGroupSucceeds(t *testing.T) {
+	logger := zap.New()
+	config := NewChartConfig(logger, "chart")
+
+	config.FileConfig["daemonset.yaml"] = Config{
+		"abc": []XPathConfig{
+			{
+				Strategy: XPathStrategyInlineRegex,
+				Key:      "spec.template.spec.containers[0].args",
+				Regex:    `--metrics-bind-address=127.0.0.1:(\d)`,
+			},
+		},
+	}
+
+	require.NoError(t, config.Validate())
+}
