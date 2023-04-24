@@ -330,7 +330,7 @@ We also introduce the `strategy` in the config file.
               key: manager.probe.port
         ```
 
-    1. The emitted helm template (args section) will be
+    1. The emitted helm template will be
 
       ```yaml
           - args:
