@@ -4,3 +4,5 @@ kind: ServiceAccount
 metadata: 
   name: memcached-operator-controller-manager
   namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "memcached-operator.labels" . | nindent 4 }}

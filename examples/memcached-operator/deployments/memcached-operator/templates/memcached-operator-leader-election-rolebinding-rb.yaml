@@ -4,6 +4,8 @@ kind: RoleBinding
 metadata: 
   name: memcached-operator-leader-election-rolebinding
   namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "memcached-operator.labels" . | nindent 4 }}
 roleRef: 
   kind: Role
   apiGroup: rbac.authorization.k8s.io
