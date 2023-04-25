@@ -157,6 +157,9 @@ func (cc *ChartConfig) Values() (string, error) {
 					if i < len(substrings)-1 {
 						configRoot = configRoot[substring].(GenericMap)
 					} else {
+						if configRoot[substring] != nil && v[0].Value == nil {
+							c.Value = configRoot[substring]
+						}
 						if c.Value == nil {
 							cc.Logger.Info(fmt.Sprintf("%s: %s", c.Key, "nil"))
 							delete(configRoot, substring)
@@ -221,8 +224,10 @@ func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix st
 }
 
 func (c *ChartConfig) Validate() error {
-	// Currently validate that file-if can only be present at root level file configs
-	// and that globalConfig cannot contain a root level entry
+	// Validates
+	// - file-if can only be present at root level file configs
+	// - globalConfig cannot contain a root level entry
+	// - inline-regex must have regex property, and the regex must compile and contain exactly one capture group
 	if _, ok := c.GlobalConfig[XPathRoot]; ok {
 		return fmt.Errorf("cannot have root level config in GlobalConfig")
 	}
