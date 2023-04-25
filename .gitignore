@@ -20,8 +20,3 @@ kyaml/kyaml
 
 # vscode extensions
 .vscode
-
-# Examples
-examples/memcached-operator/*
-!examples/memcached-operator/Makefile
-!examples/memcached-operator/deployments
