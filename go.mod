@@ -3,6 +3,7 @@ module github.com/yeahdongcn/kustohelmize
 go 1.18
 
 require (
+	github.com/dlclark/regexp2 v1.9.0
 	github.com/go-logr/logr v1.2.3
 	github.com/iancoleman/strcase v0.2.0
 	github.com/pkg/errors v0.9.1

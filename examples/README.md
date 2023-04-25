@@ -283,3 +283,72 @@ We also introduce the `strategy` in the config file.
       - strategy: file-if
         key: sharedValues.promethues.enabled
     ```
+1.  `inline-regex`
+
+    Allows insertion of a templated value as part of an overall string, such as the value for a pod's command line argument
+
+    Consider the following snippet from the [memcached deployment](../examples/memcached-operator/deployments/memcached-operator/templates/memcached-operator-controller-manager-deployment.yaml) in the examples folder:
+
+    ```yaml
+        - args:
+            - --health-probe-bind-address=:8081
+            - --metrics-bind-address=127.0.0.1:8080
+            - --leader-elect
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8081
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8081
+            initialDelaySeconds: 5
+            periodSeconds: 10
+      ```
+
+    You want to template the probe port. It therefore needs to be templated in the `args` section and also at `port` for each of `readinessProbe` and `livenessProbe`
+
+    This is how to do it.
+
+    1.  Edit the kustohelmize config file
+    1.  Set up the deployment's config like this
+
+        ```yaml
+        fileConfig:
+          deployments/memcached-operator-generated/memcached-operator-controller-manager-deployment.yaml:
+            spec.template.spec.containers[1].args:
+            - strategy: inline-regex
+              key: manager.probe.port
+              regex: --health-probe-bind-address=:(/d+)
+            spec.template.spec.containers[1].readinessProbe.httpGet.port:
+            - strategy: inline
+              key: manager.probe.port
+            spec.template.spec.containers[1].livenessProbe.httpGet.port:
+            - strategy: inline
+              key: manager.probe.port
+        ```
+
+    1. The emitted helm template will be
+
+      ```yaml
+          - args:
+              - --health-probe-bind-address=:{{ .Values.memcachedOperatorControllerManagerDeployment.manager.probe.port }}
+              - --metrics-bind-address=127.0.0.1:8080
+              - --leader-elect
+            livenessProbe:
+              httpGet:
+                path: /healthz
+                port: {{ .Values.memcachedOperatorControllerManagerDeployment.manager.probe.port }}
+              initialDelaySeconds: 15
+              periodSeconds: 20
+            readinessProbe:
+              httpGet:
+                path: /readyz
+                port: {{ .Values.memcachedOperatorControllerManagerDeployment.manager.probe.port }}
+              initialDelaySeconds: 5
+              periodSeconds: 10
+      ```
+
+    The match group in the regex `(\d+)` is templated with the `.Values` identified by `key`. Currently only one replacement per list item is possible.

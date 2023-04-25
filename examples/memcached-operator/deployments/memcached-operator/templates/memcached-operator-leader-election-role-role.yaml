@@ -4,6 +4,8 @@ kind: Role
 metadata: 
   name: memcached-operator-leader-election-role
   namespace: {{ .Values.namespace }}
+  labels:
+    {{- include "memcached-operator.labels" . | nindent 4 }}
 rules:   
   - apiGroups: 
       - ""
