@@ -321,7 +321,8 @@ We also introduce the `strategy` in the config file.
             spec.template.spec.containers[1].args:
             - strategy: inline-regex
               key: manager.probe.port
-              regex: --health-probe-bind-address=:(/d+)
+              regex: --health-probe-bind-address=:(\d+)
+              value: 9010
             spec.template.spec.containers[1].readinessProbe.httpGet.port:
             - strategy: inline
               key: manager.probe.port
