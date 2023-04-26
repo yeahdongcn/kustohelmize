@@ -13,6 +13,7 @@ memcachedOperatorControllerManagerDeployment:
     image:
       repository: controller
       tag: latest
+    imagePullSecrets: {}
     name: manager
     probe:
       port: 9010
