@@ -45,6 +45,21 @@ import (
 // This code is copied from https://github.com/golang/dep/blob/37d6c560cdf407be7b6cd035b23dba89df9275cf/internal/fs/fs.go
 // No changes to the code were made other than removing some unused functions
 
+// Determine if path is absolute
+func IsAbsolutePath(path string) (b bool) {
+
+	if path == "" {
+		return false
+	}
+
+	if os.IsPathSeparator(path[0]) {
+		return true
+	}
+
+	// Check Windows path
+	return isAbs(path)
+}
+
 // RenameWithFallback attempts to rename a file or directory, but falls back to
 // copying in the event of a cross-device link error. If the fallback copy
 // succeeds, src is still removed, emulating normal rename behavior.
