@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/dlclark/regexp2"
@@ -119,6 +120,32 @@ func NewChartConfig(logger logr.Logger, chartname string) *ChartConfig {
 	return config
 }
 
+// Sort the XPathConfig keys such that strategies that have the most non-nil values are processed first.
+func sortConfigKeys(config Config) []XPath {
+
+	configKeys := make([]XPath, 0, len(config))
+
+	for k := range config {
+		configKeys = append(configKeys, k)
+	}
+
+	sort.SliceStable(configKeys, func(i, j int) bool {
+		valueCount := func(strategies XPathConfigs) int {
+			values := 0
+			for _, strategy := range strategies {
+				if strategy.Value != nil {
+					values++
+				}
+			}
+			return values
+		}
+
+		return valueCount(config[configKeys[i]]) > valueCount(config[configKeys[j]])
+	})
+
+	return configKeys
+}
+
 func (cc *ChartConfig) Values() (string, error) {
 	str := ""
 	var err error
@@ -139,10 +166,18 @@ func (cc *ChartConfig) Values() (string, error) {
 		root[key] = GenericMap{}
 		fileRoot := root[key].(GenericMap)
 
-		for _, v := range fileConfig {
-			for _, c := range v {
+		// Memoize values seen at various XPaths
+		rememberedValues := make(map[string]interface{})
+
+		// Order each fileConfig by whether or not any of its strategies have values
+		for _, xpath := range sortConfigKeys(fileConfig) {
+			for _, c := range fileConfig[xpath] {
 				configRoot := fileRoot
 				substrings := strings.Split(c.Key, XPathSeparator)
+				if _, ok := rememberedValues[c.Key]; !ok {
+					// Init rememberdValues for this key
+					rememberedValues[c.Key] = nil
+				}
 				for i, substring := range substrings {
 					// XXX: For shared values and global defined values, we should not extend values.yaml
 					if i == 0 && (substring == sharedValuesPrefix || substring == cc.Chartname || substring == "") {
@@ -157,13 +192,15 @@ func (cc *ChartConfig) Values() (string, error) {
 					if i < len(substrings)-1 {
 						configRoot = configRoot[substring].(GenericMap)
 					} else {
-						if configRoot[substring] != nil && v[0].Value == nil {
-							c.Value = configRoot[substring]
+						previousValue, ok := rememberedValues[c.Key]
+						if configRoot[substring] != nil && ok && previousValue != nil {
+							c.Value = previousValue
 						}
 						if c.Value == nil {
 							cc.Logger.Info(fmt.Sprintf("%s: %s", c.Key, "nil"))
 							delete(configRoot, substring)
 						} else {
+							rememberedValues[c.Key] = c.Value
 							switch v := c.Value.(type) {
 							case int:
 								cc.Logger.V(10).Info("type int", "key", c.Key, "value", v)
