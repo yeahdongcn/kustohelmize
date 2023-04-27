@@ -14,6 +14,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 
+	"github.com/yeahdongcn/kustohelmize/internal/third_party/dep/fs"
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/template"
 	"github.com/yeahdongcn/kustohelmize/pkg/value"
@@ -108,14 +109,23 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 }
 
 func (o *createOptions) prepare() error {
-	e, err := os.Executable()
-	if err != nil {
-		o.logger.Error(err, "Error getting executable path")
-		return err
-	}
 
-	path := filepath.Join(filepath.Dir(e), o.kubernetesSplitYamlCommand)
-	_, err = exec.Command(path, "--outdir", o.intermediateDir, o.from).CombinedOutput()
+	var path string
+
+	if fs.IsAbsolutePath(o.kubernetesSplitYamlCommand) {
+		// Path from -k is absolute
+		path = o.kubernetesSplitYamlCommand
+	} else {
+		// Path is relative to location of the running exe
+		e, err := os.Executable()
+		if err != nil {
+			o.logger.Error(err, "Error getting executable path")
+			return err
+		}
+
+		path = filepath.Join(filepath.Dir(e), o.kubernetesSplitYamlCommand)
+	}
+	_, err := exec.Command(path, "--outdir", o.intermediateDir, o.from).CombinedOutput()
 	if err != nil {
 		o.logger.Error(err, fmt.Sprintf("Error running %s", path))
 		return err
