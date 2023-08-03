@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/dlclark/regexp2"
@@ -424,7 +425,8 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			p.context.setRoleNamespace = true
 		}
 		p.logger.V(10).Info("Processing others", "root", root, "s", s)
-		if s == "true" || s == "false" {
+		_, err := strconv.Atoi(s)
+		if s == "true" || s == "false" || err == nil {
 			fmt.Fprintf(p.context.out, "\"%s\"\n", v)
 		} else if strings.Contains(s, "\n") {
 			fmt.Fprintf(p.context.out, "|\n%s\n", indent(s, nindent+1))
