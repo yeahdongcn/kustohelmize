@@ -425,7 +425,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 		}
 		p.logger.V(10).Info("Processing others", "root", root, "s", s)
 		str := String(s)
-		if str.IsBool() || str.IsDecimal() {
+		if str.IsBool() || str.IsDecimal() || str.IsWhiteSpace() {
 			fmt.Fprintf(p.context.out, "\"%s\"\n", v)
 		} else if str.HasNewLine() {
 			fmt.Fprintf(p.context.out, "|\n%s\n", indent(s, nindent+1))

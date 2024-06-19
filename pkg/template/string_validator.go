@@ -19,3 +19,7 @@ func (s String) IsDecimal() bool {
 func (s String) HasNewLine() bool {
 	return strings.Contains(string(s), "\n")
 }
+
+func (s String) IsWhiteSpace() bool {
+	return len(strings.TrimSpace(string(s))) == 0
+}
