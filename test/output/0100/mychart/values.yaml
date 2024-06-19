@@ -11,6 +11,11 @@ resources:
 
 nginxDeploymentDeployment:
   nginx:
+    env:
+      AA: true
+      BB: 2.22
+      CC: 2
+      DD: abc
     image:
       repository: nginx
       tag: stable

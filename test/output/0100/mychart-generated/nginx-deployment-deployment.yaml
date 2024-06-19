@@ -16,6 +16,15 @@ spec:
       containers:
       - name: nginx
         image: nginx:latest
+        env:
+        - name: TEST_ENV_1
+          value: "true"
+        - name: TEST_ENV_2
+          value: "2.22"
+        - name: TEST_ENV_3
+          value: "2"
+        - name: TEST_ENV_4
+          value: abc
         ports:
         - containerPort: 80
         resources:

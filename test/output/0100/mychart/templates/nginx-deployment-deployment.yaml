@@ -18,6 +18,15 @@ spec:
       containers:         
         - name: nginx
           image: "{{ .Values.nginxDeploymentDeployment.nginx.image.repository }}:{{ .Values.nginxDeploymentDeployment.nginx.image.tag | default .Chart.AppVersion }}"
+          env:             
+            - name: TEST_ENV_1
+              value: "{{ .Values.nginxDeploymentDeployment.nginx.env.AA }}"
+            - name: TEST_ENV_2
+              value: "{{ .Values.nginxDeploymentDeployment.nginx.env.BB }}"
+            - name: TEST_ENV_3
+              value: "{{ .Values.nginxDeploymentDeployment.nginx.env.CC }}"
+            - name: TEST_ENV_4
+              value: {{ .Values.nginxDeploymentDeployment.nginx.env.DD }}
           ports:             
             - containerPort: 80
           {{- with .Values.resources }}
