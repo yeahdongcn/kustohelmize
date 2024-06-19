@@ -1,4 +1,4 @@
-package template
+package util
 
 import (
 	"strconv"
@@ -11,8 +11,8 @@ func (s String) IsBool() bool {
 	return s == "true" || s == "false"
 }
 
-func (s String) IsDecimal() bool {
-	_, err := strconv.Atoi(string(s))
+func (s String) IsNumeric() bool {
+	_, err := strconv.ParseFloat(string(s), 64)
 	return err == nil
 }
 

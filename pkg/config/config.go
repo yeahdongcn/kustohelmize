@@ -51,6 +51,24 @@ type XPathConfig struct {
 	RegexCompiled *regexp2.Regexp `yaml:"-"`
 }
 
+func (x *XPathConfig) IsValueRequireQuote() bool {
+	if x.Value == nil {
+		return false
+	}
+
+	switch value := x.Value.(type) {
+	case bool, int, float64:
+		// These types always require quotes
+		return true
+	case string:
+		// Check if the string is only whitespace
+		return util.String(value).IsWhiteSpace()
+	default:
+		// Other types do not require quotes
+		return false
+	}
+}
+
 type XPathConfigs []XPathConfig
 
 type XPath string

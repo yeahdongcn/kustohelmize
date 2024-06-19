@@ -220,7 +220,7 @@ func (p *Processor) processSlice(v reflect.Value, xpath config.XPath, nindent in
 	}
 }
 
-func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs config.XPathConfigs, hasSliceIndex bool) bool {
+func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.XPath, xpathConfigs config.XPathConfigs, hasSliceIndex bool) bool {
 	if len(xpathConfigs) == 0 {
 		return false
 	}
@@ -248,6 +248,9 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 		} else if xpathConfig.Strategy == config.XPathStrategyInline {
 			// imagePullPolicy: {{ .Values.image.pullPolicy }}
 			value = fmt.Sprintf(singleValueFormat, key)
+			if strings.Contains(string(xpath), ".env") && xpathConfig.IsValueRequireQuote() {
+				value = fmt.Sprintf("\"%s\"", value)
+			}
 		} else {
 			// imagePullPolicy: {{ toYaml .Values.image.pullPolicy }}
 			value = fmt.Sprintf(singleValueFormat, key)
@@ -321,7 +324,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpathConfigs c
 
 func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
 	// XXX: The priority of file config is greater than global config.
-	if p.processMapOrDie(v, nindent, p.context.fileConfig[xpath], *hasSliceIndex) {
+	if p.processMapOrDie(v, nindent, xpath, p.context.fileConfig[xpath], *hasSliceIndex) {
 		p.logger.V(10).Info("Processed map for file config", "xpath", xpath)
 		// XXX: For the first element only.
 		if *hasSliceIndex {
@@ -329,7 +332,7 @@ func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath,
 		}
 		return true
 	}
-	if p.processMapOrDie(v, nindent, p.config.GlobalConfig[xpath], *hasSliceIndex) {
+	if p.processMapOrDie(v, nindent, xpath, p.config.GlobalConfig[xpath], *hasSliceIndex) {
 		p.logger.V(10).Info("Processed map for global config", "xpath", xpath)
 		// XXX: For the first element only.
 		if *hasSliceIndex {
@@ -424,8 +427,8 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			p.context.setRoleNamespace = true
 		}
 		p.logger.V(10).Info("Processing others", "root", root, "s", s)
-		str := String(s)
-		if str.IsBool() || str.IsDecimal() || str.IsWhiteSpace() {
+		str := util.String(s)
+		if str.IsBool() || str.IsNumeric() || str.IsWhiteSpace() {
 			fmt.Fprintf(p.context.out, "\"%s\"\n", v)
 		} else if str.HasNewLine() {
 			fmt.Fprintf(p.context.out, "|\n%s\n", indent(s, nindent+1))
