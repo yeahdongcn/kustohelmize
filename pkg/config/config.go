@@ -58,13 +58,11 @@ func (x *XPathConfig) IsValueRequireQuote() bool {
 
 	switch value := x.Value.(type) {
 	case bool, int, float64:
-		// These types always require quotes
 		return true
 	case string:
-		// Check if the string is only whitespace
-		return util.String(value).IsWhiteSpace()
+		str := util.String(value)
+		return str.IsBool() || str.IsNumeric() || str.IsWhiteSpace()
 	default:
-		// Other types do not require quotes
 		return false
 	}
 }
