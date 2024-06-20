@@ -63,6 +63,10 @@ go-test:
 0300: build
 	bin/kustohelmize create --from=test/testdata/0300_sample.yaml --suppress-namespace --version=1.0.0 --app-version=1.0.0 --description="Helm chart with suppressed namespace" test/output/0300/no-ns-chart
 
+.PHONY: 0400
+0400: build
+	bin/kustohelmize create --from=test/testdata/0400_issuer.yaml test/output/0400/mychart
+
 ##@ Tools
 
 KUBERNETES-SPLIT-YAML = $(shell pwd)/bin/kubernetes-split-yaml

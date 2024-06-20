@@ -51,7 +51,7 @@ type XPathConfig struct {
 	RegexCompiled *regexp2.Regexp `yaml:"-"`
 }
 
-func (x *XPathConfig) IsValueRequireQuote() bool {
+func (x *XPathConfig) ValueRequiresQuote() bool {
 	if x.Value == nil {
 		return false
 	}

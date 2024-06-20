@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Issuer
+metadata:
+  labels:
+    app.kubernetes.io/component: certificate
+    app.kubernetes.io/created-by: openloft
+    app.kubernetes.io/instance: selfsigned-issuer
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/name: issuer
+    app.kubernetes.io/part-of: openloft
+  name: openloft-selfsigned-issuer
+  namespace: openloft-system
+spec:
+  selfSigned: {}
+  ca:
+    secretName: ca-key-pair
+  tesla: 3.14

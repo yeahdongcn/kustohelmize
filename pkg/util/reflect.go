@@ -41,14 +41,14 @@ func ReflectValue(v reflect.Value) reflect.Value {
 
 // Take the reflected map keys which have no guaranteed order and sort them
 // Apply special ordering for certain keys at root, metadata or container level,
-// and sort remaning keys naturally.
+// and sort remaining keys naturally.
 func SortedMapKeys(m reflect.Value, root string) []reflect.Value {
 
 	if ReflectValue(m).Kind() != reflect.Map {
 		panic("Expected map")
 	}
 
-	// Defermine ordering from current XPath
+	// Determine ordering from current XPath
 
 	order := manifestFirst
 

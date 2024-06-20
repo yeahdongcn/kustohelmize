@@ -165,7 +165,7 @@ func (p *Processor) printSliceScalar(str string, nindent int) {
 // Perform regex substitution. Die if the regex system errors
 func mustReplace(rx *regexp2.Regexp, str string, replacement string) string {
 	replaced, err := rx.ReplaceFunc(str, func(m regexp2.Match) string {
-		// No additional checking here as existience of only one capture group already asserted.
+		// No additional checking here as existence of only one capture group already asserted.
 		groups := m.Groups()
 		str0 := groups[0].String()    // The whole matched string
 		cap1 := groups[1].Captures[0] // The capture group
@@ -201,7 +201,7 @@ func (p *Processor) processSlice(v reflect.Value, xpath config.XPath, nindent in
 				if matched, _ := rx.MatchString(str); !matched {
 					continue
 				}
-				// Match against xpathconfig.RegexCompiled and do replacement.
+				// Match against xpathConfig.RegexCompiled and do replacement.
 				var value string
 				key, keyType := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
 				if keyType.IsHelpersType() {
@@ -248,7 +248,10 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.X
 		} else if xpathConfig.Strategy == config.XPathStrategyInline {
 			// imagePullPolicy: {{ .Values.image.pullPolicy }}
 			value = fmt.Sprintf(singleValueFormat, key)
-			if strings.Contains(string(xpath), ".env") && xpathConfig.IsValueRequireQuote() {
+			if strings.Contains(string(xpath), ".env") && xpathConfig.ValueRequiresQuote() {
+				// env:
+				// - name: ENABLE_FEATURE_GATE
+				//   value: "{{ .Values.deployment.nginx.env.ENABLE_FEATURE_GATE }}"
 				value = fmt.Sprintf("\"%s\"", value)
 			}
 		} else {
@@ -385,15 +388,21 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 	case reflect.Map:
 		p.logger.V(10).Info("Processing map", "root", root)
 
+		kvs := util.SortedMapKeys(v, string(root))
 		if !root.IsRoot() && sliceIndex == config.XPathSliceIndexNone {
-			fmt.Fprintln(p.context.out)
+			if len(kvs) > 0 {
+				fmt.Fprintln(p.context.out)
+			} else {
+				// Handle empty map
+				fmt.Fprintf(p.context.out, "{}\n")
+			}
 		}
 		hasSliceIndex := sliceIndex != config.XPathSliceIndexNone
-		for _, k := range util.SortedMapKeys(v, string(root)) {
-			mapKey := util.ReflectValue(k).String()
+		for _, kv := range kvs {
+			mapKey := util.ReflectValue(kv).String()
 			xpath := root.NewChild(mapKey, sliceIndex)
-			if !p.processMap(k, nindent, xpath, &hasSliceIndex) {
-				key := fmt.Sprintf(singleLineKeyFormat, k)
+			if !p.processMap(kv, nindent, xpath, &hasSliceIndex) {
+				key := fmt.Sprintf(singleLineKeyFormat, kv)
 				if hasSliceIndex {
 					fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, true))
 					// XXX: For the first element only.
@@ -401,7 +410,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 				} else {
 					fmt.Fprint(p.context.out, indent(key, nindent))
 				}
-				p.walk(v.MapIndex(k), nindent+1, xpath, config.XPathSliceIndexNone)
+				p.walk(v.MapIndex(kv), nindent+1, xpath, config.XPathSliceIndexNone)
 			}
 		}
 	default:
