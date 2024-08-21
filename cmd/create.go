@@ -144,6 +144,31 @@ func (o *createOptions) configPath() string {
 	return filepath.Join(filepath.Dir(o.name), fmt.Sprintf("%s.config", o.chartname()))
 }
 
+func (o *createOptions) updateConfig(config *cfg.ChartConfig, forceSave bool) error {
+	shouldSave := false
+
+	c, _ := os.ReadDir(o.intermediateDir)
+	for _, entry := range c {
+		if _, ok := config.FileConfig[filepath.Join(o.intermediateDir, entry.Name())]; !ok {
+			config.FileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
+			if !forceSave {
+				shouldSave = true
+			}
+		}
+	}
+
+	if shouldSave || forceSave {
+		output, err := yaml.Marshal(config)
+		if err != nil {
+			o.logger.Error(err, "Error marshalling config file")
+			return err
+		}
+		return os.WriteFile(o.configPath(), output, 0644)
+	}
+
+	return nil
+}
+
 func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	path := o.configPath()
 	logger := o.logger.WithName("config")
@@ -162,6 +187,11 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 			o.logger.Error(err, "Error unmarshalling config file", "path", path)
 			return nil, err
 		}
+		err = o.updateConfig(config, false)
+		if err != nil {
+			o.logger.Error(err, "Error updating config file", "path", path)
+			return nil, err
+		}
 		err = config.Validate()
 		if err != nil {
 			o.logger.Error(err, "Error validating config file", "path", path)
@@ -172,18 +202,8 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 
 	chartname := o.chartname()
 	config := cfg.NewChartConfig(logger, chartname)
-
-	c, _ := os.ReadDir(o.intermediateDir)
-	for _, entry := range c {
-		config.FileConfig[filepath.Join(o.intermediateDir, entry.Name())] = cfg.Config{}
-	}
-
-	output, err := yaml.Marshal(config)
-	if err != nil {
-		o.logger.Error(err, "Error marshalling config file")
-		return nil, err
-	}
-	return config, os.WriteFile(path, output, 0644)
+	err = o.updateConfig(config, true)
+	return config, err
 }
 
 func (o *createOptions) run(out io.Writer) error {
