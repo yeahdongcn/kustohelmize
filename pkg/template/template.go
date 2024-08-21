@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -104,7 +103,7 @@ func (p *Processor) Process() error {
 			p.logger.Error(err, "Error writing dest file header", "dest", dest)
 		}
 
-		bs, err := ioutil.ReadFile(source)
+		bs, err := os.ReadFile(source)
 		if err != nil {
 			p.logger.Error(err, "Error reading source YAML", "source", source)
 			return err

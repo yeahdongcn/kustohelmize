@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -152,7 +151,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	if err == nil {
 		o.logger.Info("Config file already exists", "path", path)
 
-		out, err := ioutil.ReadFile(path)
+		out, err := os.ReadFile(path)
 		if err != nil {
 			o.logger.Error(err, "Error reading config file", "path", path)
 			return nil, err
@@ -184,7 +183,7 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 		o.logger.Error(err, "Error marshalling config file")
 		return nil, err
 	}
-	return config, ioutil.WriteFile(path, output, 0644)
+	return config, os.WriteFile(path, output, 0644)
 }
 
 func (o *createOptions) run(out io.Writer) error {
@@ -261,7 +260,7 @@ func (o *createOptions) run(out io.Writer) error {
 	}
 
 	chartfile := filepath.Join(chartdir, chartutil.ChartfileName)
-	ins, err := ioutil.ReadFile(chartfile)
+	ins, err := os.ReadFile(chartfile)
 	if err != nil {
 		o.logger.Error(err, "Error reading chartfile")
 		return err
@@ -281,7 +280,7 @@ func (o *createOptions) run(out io.Writer) error {
 			fmt.Fprintln(&sb, text)
 		}
 	}
-	err = ioutil.WriteFile(chartfile, []byte(sb.String()), 0644)
+	err = os.WriteFile(chartfile, []byte(sb.String()), 0644)
 	if err != nil {
 		o.logger.Error(err, "Error writing chartfile")
 		return err

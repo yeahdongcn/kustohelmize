@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 
 	"sigs.k8s.io/kustomize/kyaml/kio"
 	"sigs.k8s.io/kustomize/kyaml/openapi"
@@ -53,7 +53,7 @@ func main() {
 		panic(err)
 	}
 	fmt.Println(node)
-	_, err = ioutil.ReadFile("/Users/yexiaodong/go/src/github.com/yeahdongcn/kustohelmize/test/testdata/0200_sample.yaml")
+	_, err = os.ReadFile("/Users/yexiaodong/go/src/github.com/yeahdongcn/kustohelmize/test/testdata/0200_sample.yaml")
 	if err != nil {
 		panic(err)
 	}
