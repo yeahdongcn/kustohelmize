@@ -32,28 +32,26 @@ const (
 )
 
 type createOptions struct {
-	logger logr.Logger
+	options
 
 	version     string
 	appVersion  string
 	description string
 
-	from                         string
-	kubernetesSplitYamlCommand   string
-	intermediateDir              string
-	enableIntermediateDirCleanup bool
-	config                       string
-	suppressNamespace            bool
+	from                       string
+	kubernetesSplitYamlCommand string
+	suppressNamespace          bool
 
 	// From helm.
 	starter    string // --starter
-	name       string
 	starterDir string
 }
 
 func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	o := &createOptions{
-		logger: logger.WithName("create"),
+		options: options{
+			logger: logger.WithName("create"),
+		},
 	}
 
 	cmd := &cobra.Command{
@@ -73,7 +71,6 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			o.name = args[0]
 			o.starterDir = helmpath.DataPath("starters")
-
 			if o.intermediateDir == "" {
 				o.intermediateDir = fmt.Sprintf("%s-%s", o.name, "generated")
 			}
@@ -92,7 +89,7 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	cmd.Flags().StringVarP(&o.appVersion, "app-version", "a", "", "The version of the application enclosed inside of this chart")
 	cmd.Flags().StringVarP(&o.description, "description", "d", "", "A one-sentence description of the chart")
 
-	cmd.Flags().StringVarP(&o.from, "from", "f", "", "The path to a kustomized YAML file")
+	cmd.Flags().StringVarP(&o.from, "from", "f", "", "The path to a Kubernetes manifest YAML file")
 	cmd.MarkFlagRequired("from")
 	cmd.Flags().StringVarP(&o.kubernetesSplitYamlCommand, "kubernetes-split-yaml-command", "k", "kubernetes-split-yaml", "kubernetes-split-yaml command (path to executable)")
 	cmd.Flags().BoolVarP(&o.suppressNamespace, "suppress-namespace", "s", false, "Whether to suppress creation of namespace resource, which Kustomize will emit. RBAC bindings for SAs will be to {{ .Release.Namespace }}")
@@ -103,45 +100,8 @@ func newCreateCmd(logger logr.Logger, out io.Writer) *cobra.Command {
 	cmd.Flags().StringVarP(&o.config, "config", "c", "", "The path to a config file")
 	cmd.Flags().MarkHidden("config")
 
-	cmd.Flags().StringVarP(&o.starter, "starter", "p", "", "the name or absolute path to Helm starter scaffold")
+	cmd.Flags().StringVarP(&o.starter, "starter", "p", "", "The name or absolute path to Helm starter scaffold")
 	return cmd
-}
-
-func (o *createOptions) prepare() error {
-
-	var path string
-
-	if fs.IsAbsolutePath(o.kubernetesSplitYamlCommand) {
-		// Path from -k is absolute
-		path = o.kubernetesSplitYamlCommand
-	} else {
-		// Path is relative to location of the running exe
-		e, err := os.Executable()
-		if err != nil {
-			o.logger.Error(err, "Error getting executable path")
-			return err
-		}
-
-		path = filepath.Join(filepath.Dir(e), o.kubernetesSplitYamlCommand)
-	}
-	_, err := exec.Command(path, "--outdir", o.intermediateDir, o.from).CombinedOutput()
-	if err != nil {
-		o.logger.Error(err, fmt.Sprintf("Error running %s", path))
-		return err
-	}
-	return nil
-}
-
-func (o *createOptions) chartroot() string {
-	return filepath.Dir(o.name)
-}
-
-func (o *createOptions) chartname() string {
-	return filepath.Base(o.name)
-}
-
-func (o *createOptions) configPath() string {
-	return filepath.Join(filepath.Dir(o.name), fmt.Sprintf("%s.config", o.chartname()))
 }
 
 func (o *createOptions) updateConfig(config *cfg.ChartConfig, forceSave bool) error {
@@ -204,6 +164,30 @@ func (o *createOptions) getConfig() (*cfg.ChartConfig, error) {
 	config := cfg.NewChartConfig(logger, chartname)
 	err = o.updateConfig(config, true)
 	return config, err
+}
+
+func (o *createOptions) prepare() error {
+	var path string
+
+	if fs.IsAbsolutePath(o.kubernetesSplitYamlCommand) {
+		// Path from -k is absolute
+		path = o.kubernetesSplitYamlCommand
+	} else {
+		// Path is relative to location of the running exe
+		e, err := os.Executable()
+		if err != nil {
+			o.logger.Error(err, "Error getting executable path")
+			return err
+		}
+
+		path = filepath.Join(filepath.Dir(e), o.kubernetesSplitYamlCommand)
+	}
+	_, err := exec.Command(path, "--outdir", o.intermediateDir, o.from).CombinedOutput()
+	if err != nil {
+		o.logger.Error(err, fmt.Sprintf("Error running %s", path))
+		return err
+	}
+	return nil
 }
 
 func (o *createOptions) run(out io.Writer) error {

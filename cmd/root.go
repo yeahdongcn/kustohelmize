@@ -18,6 +18,7 @@ func NewRootCmd(logger logr.Logger, out io.Writer, args []string) (*cobra.Comman
 	// Add subcommands
 	cmd.AddCommand(
 		newCreateCmd(logger, out),
+		newPurgeCmd(logger, out),
 		newVersionCmd(out),
 	)
 
