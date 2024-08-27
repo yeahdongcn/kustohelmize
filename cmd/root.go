@@ -10,7 +10,7 @@ import (
 func NewRootCmd(logger logr.Logger, out io.Writer, args []string) (*cobra.Command, error) {
 	cmd := &cobra.Command{
 		Use:          "kustohelmize",
-		Short:        "From a YAML file, generate a Helm chart",
+		Short:        "Automate Helm chart creation from any existing Kubernetes manifests",
 		Long:         ``,
 		SilenceUsage: true,
 	}

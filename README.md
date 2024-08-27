@@ -12,7 +12,7 @@ kustohelmize
 
 ```
 ❯ ./kustohelmize
-From a YAML file, generate a Helm chart
+Automate Helm chart creation from any existing Kubernetes manifests
 
 Usage:
   kustohelmize [command]
@@ -33,6 +33,8 @@ kustohelmize create
 
 ```
 ❯ ./kustohelmize create --help
+Create a new Helm chart
+
 Usage:
   kustohelmize create NAME [flags]
 
