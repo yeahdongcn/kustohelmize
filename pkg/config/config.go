@@ -79,10 +79,17 @@ func (xpath XPath) NewChild(s string, sliceIndex int) XPath {
 	if xpath.IsRoot() {
 		return XPath(s)
 	}
-	if sliceIndex == XPathSliceIndexNone {
-		return XPath(fmt.Sprintf("%s.%s", xpath, s))
+	if s == "" {
+		if sliceIndex == XPathSliceIndexNone {
+			return XPath(xpath)
+		}
+		return XPath(fmt.Sprintf("%s[%d]", xpath, sliceIndex))
+	} else {
+		if sliceIndex == XPathSliceIndexNone {
+			return XPath(fmt.Sprintf("%s.%s", xpath, s))
+		}
+		return XPath(fmt.Sprintf("%s[%d].%s", xpath, sliceIndex, s))
 	}
-	return XPath(fmt.Sprintf("%s[%d].%s", xpath, sliceIndex, s))
 }
 
 type Config map[XPath]XPathConfigs

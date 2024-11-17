@@ -1,0 +1,9 @@
+apiVersion: apps/v1
+kind: Pod
+metadata:
+  name: my-pod
+spec:
+  containers:
+    - image: my-image
+      name: my-container
+      securityContext:

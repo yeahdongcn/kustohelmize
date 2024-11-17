@@ -412,6 +412,9 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 				p.walk(v.MapIndex(kv), nindent+1, xpath, config.XPathSliceIndexNone)
 			}
 		}
+		a := root.NewChild("", sliceIndex)
+		fmt.Printf("yeahdongcn a: %s %d\n", a, nindent)
+		fmt.Printf("yeahdongcn a: %+v\n", p.context.fileConfig[a])
 	default:
 		if p.suppressNamespace && (strings.HasSuffix(string(root), "metadata.namespace") || (p.context.setRoleNamespace && strings.HasSuffix(string(root), "namespace"))) {
 			// Use helm's idea of what the namespace is

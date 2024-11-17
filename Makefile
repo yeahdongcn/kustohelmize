@@ -67,6 +67,10 @@ go-test:
 0400: build
 	bin/kustohelmize create --from=test/testdata/0400_issuer.yaml test/output/0400/mychart
 
+.PHONY: 0600
+0600: build
+	bin/kustohelmize create --from=test/testdata/0600_pod.yaml test/output/0600/mychart
+
 ##@ Tools
 
 KUBERNETES-SPLIT-YAML = $(shell pwd)/bin/kubernetes-split-yaml
