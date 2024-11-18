@@ -296,11 +296,16 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.X
 	case config.XPathStrategyControlIfYAML:
 		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
 
+		condition := p.config.GetFormattedCondition(&xpathConfig, p.context.prefix)
+		if condition == "" {
+			condition = key
+		}
+
 		var value string
 		if xpathConfig.Strategy == config.XPathStrategyControlIf {
-			value = fmt.Sprintf(ifFormat, key, v, key)
-		} else {
-			value = fmt.Sprintf(ifYAMLFormat, key, v, key, (nindent+1)*2)
+			value = fmt.Sprintf(ifFormat, condition, v, key)
+		} else { // XPathStrategyControlIfYAML
+			value = fmt.Sprintf(ifYAMLFormat, condition, v, key, (nindent+1)*2)
 		}
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true

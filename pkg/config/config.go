@@ -43,12 +43,14 @@ const (
 )
 
 type XPathConfig struct {
-	Strategy      XPathStrategy   `yaml:"strategy"`
-	Key           string          `yaml:"key"`
-	Value         interface{}     `yaml:"value,omitempty"`
-	DefaultValue  interface{}     `yaml:"defaultValue,omitempty"`
-	Regex         string          `yaml:"regex,omitempty"`
-	RegexCompiled *regexp2.Regexp `yaml:"-"`
+	Strategy       XPathStrategy   `yaml:"strategy"`
+	Key            string          `yaml:"key"`
+	Value          interface{}     `yaml:"value,omitempty"`
+	DefaultValue   interface{}     `yaml:"defaultValue,omitempty"`
+	Regex          string          `yaml:"regex,omitempty"`
+	RegexCompiled  *regexp2.Regexp `yaml:"-"`
+	Condition      string          `yaml:"condition,omitempty"`
+	ConditionValue bool            `yaml:"conditionValue,omitempty" default:"false"`
 }
 
 func (x *XPathConfig) ValueRequiresQuote() bool {
@@ -125,6 +127,11 @@ type ChartConfig struct {
 	FileConfig   map[string]Config `yaml:"fileConfig"`
 }
 
+type kvPair struct {
+	Key   string
+	Value interface{}
+}
+
 func NewChartConfig(logger logr.Logger, chartname string) *ChartConfig {
 	config := &ChartConfig{
 		Logger:       logger,
@@ -189,58 +196,65 @@ func (cc *ChartConfig) Values() (string, error) {
 		for _, xpath := range sortConfigKeys(fileConfig) {
 			for _, c := range fileConfig[xpath] {
 				configRoot := fileRoot
-				substrings := strings.Split(c.Key, XPathSeparator)
-				if _, ok := rememberedValues[c.Key]; !ok {
-					// Init rememberdValues for this key
-					rememberedValues[c.Key] = nil
+
+				kvs := []kvPair{{c.Key, c.Value}}
+				if c.Condition != "" {
+					kvs = append(kvs, kvPair{c.Condition, c.ConditionValue})
 				}
-				for i, substring := range substrings {
-					// XXX: For shared values and global defined values, we should not extend values.yaml
-					if i == 0 && (substring == sharedValuesPrefix || substring == cc.Chartname || substring == "") {
-						break
+				for _, kv := range kvs {
+					substrings := strings.Split(kv.Key, XPathSeparator)
+					if _, ok := rememberedValues[kv.Key]; !ok {
+						// Init rememberedValues for this key
+						rememberedValues[kv.Key] = nil
 					}
-					if i == 1 && substring == "Chart" {
-						break
-					}
-					if configRoot[substring] == nil {
-						configRoot[substring] = GenericMap{}
-					}
-					if i < len(substrings)-1 {
-						configRoot = configRoot[substring].(GenericMap)
-					} else {
-						previousValue, ok := rememberedValues[c.Key]
-						if configRoot[substring] != nil && ok && previousValue != nil {
-							c.Value = previousValue
+					for i, substring := range substrings {
+						// XXX: For shared values and global defined values, we should not extend values.yaml
+						if i == 0 && (substring == sharedValuesPrefix || substring == cc.Chartname || substring == "") {
+							break
 						}
-						if c.Value == nil {
-							cc.Logger.Info(fmt.Sprintf("%s: %s", c.Key, "nil"))
-							delete(configRoot, substring)
+						if i == 1 && substring == "Chart" {
+							break
+						}
+						if configRoot[substring] == nil {
+							configRoot[substring] = GenericMap{}
+						}
+						if i < len(substrings)-1 {
+							configRoot = configRoot[substring].(GenericMap)
 						} else {
-							rememberedValues[c.Key] = c.Value
-							switch v := c.Value.(type) {
-							case int:
-								cc.Logger.V(10).Info("type int", "key", c.Key, "value", v)
-								configRoot[substring] = v
-							case string:
-								cc.Logger.V(10).Info("type string", "key", c.Key, "value", v)
-								configRoot[substring] = v
-							case map[interface{}]interface{}:
-								cc.Logger.V(10).Info("type map[interface{}]interface{}", "key", c.Key)
-								if len(v) == 0 {
-									delete(configRoot, substring)
-								} else {
+							previousValue, ok := rememberedValues[kv.Key]
+							if configRoot[substring] != nil && ok && previousValue != nil {
+								kv.Value = previousValue
+							}
+							if kv.Value == nil {
+								cc.Logger.Info(fmt.Sprintf("%s: %s", kv.Key, "nil"))
+								delete(configRoot, substring)
+							} else {
+								rememberedValues[kv.Key] = kv.Value
+								switch v := kv.Value.(type) {
+								case int:
+									cc.Logger.V(10).Info("type int", "key", kv.Key, "value", v)
+									configRoot[substring] = v
+								case string:
+									cc.Logger.V(10).Info("type string", "key", kv.Key, "value", v)
+									configRoot[substring] = v
+								case map[interface{}]interface{}:
+									cc.Logger.V(10).Info("type map[interface{}]interface{}", "key", kv.Key)
+									if len(v) == 0 {
+										delete(configRoot, substring)
+									} else {
+										configRoot[substring] = v
+									}
+								case []interface{}:
+									cc.Logger.V(10).Info("type []interface{}", "key", kv.Key)
+									if len(v) == 0 {
+										delete(configRoot, substring)
+									} else {
+										configRoot[substring] = v
+									}
+								default:
+									cc.Logger.V(10).Info("type default", "key", kv.Key)
 									configRoot[substring] = v
 								}
-							case []interface{}:
-								cc.Logger.V(10).Info("type []interface{}", "key", c.Key)
-								if len(v) == 0 {
-									delete(configRoot, substring)
-								} else {
-									configRoot[substring] = v
-								}
-							default:
-								cc.Logger.V(10).Info("type default", "key", c.Key)
-								configRoot[substring] = v
 							}
 						}
 					}
@@ -255,6 +269,14 @@ func (cc *ChartConfig) Values() (string, error) {
 
 	str += fmt.Sprintf("%s\n", string(out))
 	return str, nil
+}
+
+func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) string {
+	// We don't expect the condition to be a shared value
+	if xc.Condition == "" {
+		return ""
+	}
+	return fmt.Sprintf(".Values.%s.%s", prefix, xc.Condition)
 }
 
 func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix string) (string, KeyType) {
