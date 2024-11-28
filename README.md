@@ -6,6 +6,14 @@
 
 Kustohelmize allows you to easily create a Helm Chart from a [kustomized](https://github.com/kubernetes-sigs/kustomize) YAML file.
 
+- [Kustohelmize](#kustohelmize)
+  - [CLI](#cli)
+    - [kustohelmize](#kustohelmize-1)
+    - [kustohelmize create](#kustohelmize-create)
+  - [User Scenario](#user-scenario)
+    - [Working with kustomize](#working-with-kustomize)
+  - [Community](#community)
+
 ## CLI
 
 ### kustohelmize
