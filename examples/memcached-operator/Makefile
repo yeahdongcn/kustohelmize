@@ -172,8 +172,8 @@ KUBERNETES-SPLIT-YAML ?= $(LOCALBIN)/kubernetes-split-yaml
 KUSTOHELMIZE ?= $(LOCALBIN)/kustohelmize
 
 ## Tool Versions
-KUSTOMIZE_VERSION ?= v4.5.5
-CONTROLLER_TOOLS_VERSION ?= v0.9.0
+KUSTOMIZE_VERSION ?= v5.3.0
+CONTROLLER_TOOLS_VERSION ?= v0.14.0
 
 KUSTOMIZE_INSTALL_SCRIPT ?= "https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh"
 .PHONY: kustomize
@@ -194,7 +194,7 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: kubernetes-split-yaml
 kubernetes-split-yaml: $(KUBERNETES-SPLIT-YAML) ## Download kubernetes-split-yaml locally if necessary.
 $(KUBERNETES-SPLIT-YAML): $(LOCALBIN)
-	GOBIN=$(LOCALBIN) go install github.com/yeahdongcn/kubernetes-split-yaml@v0.4.0
+	GOBIN=$(LOCALBIN) go install github.com/mogensen/kubernetes-split-yaml@v0.4.0
 
 include ../../versions.mk
 

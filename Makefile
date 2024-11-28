@@ -41,11 +41,11 @@ build: ## Build the binary.
 ##@ Test
 
 .PHONY: examples
-examples: build ## Test the binary against the examples.
+examples: build kubernetes-split-yaml ## Test the binary against the examples.
 	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
 
 .PHONY: test
-test: go-test build 0100 0200 0300 0400 0500 ## Test the binary.
+test: go-test build kubernetes-split-yaml 0100 0200 0300 0400 0500 ## Test the binary.
 
 .PHONY: go-test
 go-test:
@@ -76,7 +76,7 @@ go-test:
 KUBERNETES-SPLIT-YAML = $(shell pwd)/bin/kubernetes-split-yaml
 .PHONY: kubernetes-split-yaml
 kubernetes-split-yaml: ## Download kubernetes-split-yaml locally if necessary.
-	$(call go-install-tool,$(KUBERNETES-SPLIT-YAML),github.com/yeahdongcn/kubernetes-split-yaml@v0.4.0)
+	$(call go-install-tool,$(KUBERNETES-SPLIT-YAML),github.com/mogensen/kubernetes-split-yaml@v0.4.0)
 
 # go-install-tool will 'go install' any package $2 and install it to $1.
 PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
