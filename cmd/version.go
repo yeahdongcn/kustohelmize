@@ -45,7 +45,7 @@ func newVersionCmd(out io.Writer) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:               "version",
-		Short:             "print the client version information",
+		Short:             "Print the client version information",
 		Long:              versionDesc,
 		Args:              require.NoArgs,
 		ValidArgsFunction: noCompletions,
