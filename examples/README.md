@@ -106,7 +106,7 @@ The configuration file consists of four sections:
 
 1. `chartname`
 
-  The name of the Helm Chart.
+    The name of the Helm Chart.
 
 1. `sharedValues`
 
