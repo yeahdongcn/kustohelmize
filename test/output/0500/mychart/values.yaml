@@ -4,6 +4,12 @@ namespace: mynamespace
 
 nginxDeploymentDeployment:
   autoscaling:
-    disable: false
+    enable: false
+  expose:
+    enable: false
+  ports:
+  - containerPort: 80
+    name: http
+    protocol: TCP
   replicas: 1
 

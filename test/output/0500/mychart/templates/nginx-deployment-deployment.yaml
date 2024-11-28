@@ -6,7 +6,7 @@ metadata:
     {{- include "mychart.name" . | nindent 4 }}
   namespace: {{ .Values.namespace }}
 spec: 
-  {{- if .Values.nginxDeploymentDeployment.autoscaling.disable }}
+  {{- if .Values.nginxDeploymentDeployment.autoscaling.enable }}
   replicas: {{ .Values.nginxDeploymentDeployment.replicas }}
   {{- end }}
   selector: 
@@ -20,3 +20,6 @@ spec:
       containers:         
         - name: nginx
           image: nginx:latest
+          {{- if .Values.nginxDeploymentDeployment.expose.enable }}
+          ports: {{ toYaml .Values.nginxDeploymentDeployment.ports | nindent 12 }}
+          {{- end }}
