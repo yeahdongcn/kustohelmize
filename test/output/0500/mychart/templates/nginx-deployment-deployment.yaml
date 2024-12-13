@@ -6,7 +6,7 @@ metadata:
     {{- include "mychart.name" . | nindent 4 }}
   namespace: {{ .Values.namespace }}
 spec: 
-  {{- if .Values.nginxDeploymentDeployment.autoscaling.enable }}
+  {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.nginxDeploymentDeployment.replicas }}
   {{- end }}
   selector: 

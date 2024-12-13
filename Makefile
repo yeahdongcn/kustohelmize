@@ -1,4 +1,11 @@
+## Location to install dependencies to
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	mkdir -p $(LOCALBIN)
+
 GO ?= go
+HELM ?= helm
+KUSTOHELMIZE ?= $(LOCALBIN)/kustohelmize
 
 include $(CURDIR)/versions.mk
 
@@ -36,7 +43,7 @@ LDFLAGS += $(EXT_LDFLAGS)
 
 .PHONY: build
 build: ## Build the binary.
-	GO111MODULE=on CGO_ENABLED=0 $(GO) build -o bin/kustohelmize -ldflags '$(LDFLAGS)' $(CURDIR)/main.go
+	GO111MODULE=on CGO_ENABLED=0 $(GO) build -o $(KUSTOHELMIZE) -ldflags '$(LDFLAGS)' $(CURDIR)/main.go
 
 ##@ Test
 
@@ -53,23 +60,28 @@ go-test:
 
 .PHONY: 0100
 0100: build
-	bin/kustohelmize create --from=test/testdata/0100_deployment.yaml test/output/0100/mychart
+	$(KUSTOHELMIZE) create --from=test/testdata/0100_deployment.yaml test/output/0100/mychart
+	$(HELM) lint test/output/0100/mychart
 
 .PHONY: 0200
 0200: build
-	bin/kustohelmize create --from=test/testdata/0200_sample.yaml --version=1.0.0 --app-version=1.0.0 --description="Helm chart for testing" test/output/0200/mychart
+	$(KUSTOHELMIZE) create --from=test/testdata/0200_sample.yaml --version=1.0.0 --app-version=1.0.0 --description="Helm chart for testing" test/output/0200/mychart
+	$(HELM) lint test/output/0100/mychart
 
 .PHONY: 0300
 0300: build
-	bin/kustohelmize create --from=test/testdata/0300_sample.yaml --suppress-namespace --version=1.0.0 --app-version=1.0.0 --description="Helm chart with suppressed namespace" test/output/0300/no-ns-chart
+	$(KUSTOHELMIZE) create --from=test/testdata/0300_sample.yaml --suppress-namespace --version=1.0.0 --app-version=1.0.0 --description="Helm chart with suppressed namespace" test/output/0300/no-ns-chart
+	$(HELM) lint test/output/0100/mychart
 
 .PHONY: 0400
 0400: build
-	bin/kustohelmize create --from=test/testdata/0400_issuer.yaml test/output/0400/mychart
+	$(KUSTOHELMIZE) create --from=test/testdata/0400_issuer.yaml test/output/0400/mychart
+	$(HELM) lint test/output/0100/mychart
 
 .PHONY: 0500
 0500: build
-	bin/kustohelmize create --from=test/testdata/0500_deployment.yaml test/output/0500/mychart
+	$(KUSTOHELMIZE) create --from=test/testdata/0500_deployment.yaml test/output/0500/mychart
+	$(HELM) lint test/output/0100/mychart
 
 ##@ Tools
 

@@ -199,7 +199,11 @@ func (cc *ChartConfig) Values() (string, error) {
 
 				kvs := []kvPair{{c.Key, c.Value}}
 				if c.Condition != "" {
-					kvs = append(kvs, kvPair{c.Condition, c.ConditionValue})
+					condition := c.Condition
+					if strings.HasPrefix(c.Condition, "!") {
+						condition = c.Condition[1:]
+					}
+					kvs = append(kvs, kvPair{condition, c.ConditionValue})
 				}
 				for _, kv := range kvs {
 					substrings := strings.Split(kv.Key, XPathSeparator)
@@ -271,16 +275,35 @@ func (cc *ChartConfig) Values() (string, error) {
 	return str, nil
 }
 
-func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) string {
-	// We don't expect the condition to be a shared value
+func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (string, bool) {
+	isNegative := false
+
 	if xc.Condition == "" {
-		return ""
+		return "", isNegative
 	}
-	return fmt.Sprintf(".Values.%s.%s", prefix, xc.Condition)
+
+	condition := xc.Condition
+	if strings.HasPrefix(condition, "!") {
+		isNegative = true
+		condition = condition[1:]
+	}
+	key, keyType := c.determineKeyType(condition)
+	if keyType == KeyTypeFile {
+		key = fmt.Sprintf(".Values.%s.%s", prefix, key)
+	} else if keyType == KeyTypeShared {
+		key = fmt.Sprintf(".Values.%s", key)
+	} else if keyType == KeyTypeNotFound {
+		if xc.Strategy == XPathStrategyControlIf || xc.Strategy == XPathStrategyControlIfYAML {
+			key = fmt.Sprintf(".Values.%s", key)
+		} else {
+			panic(fmt.Sprintf("%s not found", xc.Key))
+		}
+	}
+	return key, isNegative
 }
 
 func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix string) (string, KeyType) {
-	key, keyType := c.getKey(xc)
+	key, keyType := c.determineKeyType(xc.Key)
 	if keyType == KeyTypeFile {
 		key = fmt.Sprintf(".Values.%s.%s", prefix, key)
 	} else if keyType == KeyTypeShared {
@@ -364,8 +387,7 @@ func (c *ChartConfig) keyExist(key string) (string, bool) {
 	return key, true
 }
 
-func (c *ChartConfig) getKey(xc *XPathConfig) (string, KeyType) {
-	key := xc.Key
+func (c *ChartConfig) determineKeyType(key string) (string, KeyType) {
 	if strings.HasPrefix(key, sharedValuesPrefix) {
 		key, exist := c.keyExist(key)
 		if !exist {
