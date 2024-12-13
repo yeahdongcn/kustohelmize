@@ -36,7 +36,13 @@ const (
 	ifFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s: " +
 		leftDelimiter + "%s" + rightDelimiter + "\n" +
 		endDelimited
+	ifNotFormat = leftDelimiterTrimSpaceTrailing + "if not %s" + rightDelimiter + "\n%s: " +
+		leftDelimiter + "%s" + rightDelimiter + "\n" +
+		endDelimited
 	ifYAMLFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n%s: " +
+		leftDelimiter + "toYaml %s | nindent %d" + rightDelimiter + "\n" +
+		endDelimited
+	ifNotYAMLFormat = leftDelimiterTrimSpaceTrailing + "if not %s" + rightDelimiter + "\n%s: " +
 		leftDelimiter + "toYaml %s | nindent %d" + rightDelimiter + "\n" +
 		endDelimited
 	fileIfFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n"

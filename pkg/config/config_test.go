@@ -58,7 +58,7 @@ func TestGetKeyFromSharedValues(t *testing.T) {
 		Strategy: XPathStrategyInline,
 		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "this.is.a.nodeSelector"),
 	}
-	key, keyType := config.getKey(&xc)
+	key, keyType := config.determineKeyType(xc.Key)
 	require.Equal(t, keyType, KeyTypeShared)
 	require.Equal(t, key, "this.is.a.nodeSelector")
 
@@ -66,7 +66,7 @@ func TestGetKeyFromSharedValues(t *testing.T) {
 		Strategy: XPathStrategyInline,
 		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "this.is.b.nodeSelector"),
 	}
-	key, keyType = config.getKey(&xc)
+	key, keyType = config.determineKeyType(xc.Key)
 	require.Equal(t, keyType, KeyTypeNotFound)
 	require.Equal(t, key, "this.is.b.nodeSelector")
 }
