@@ -17,6 +17,7 @@ vendor/
 # Binaries
 bin/
 kyaml/kyaml
+kubernetes-split-yaml
 
 # vscode extensions
 .vscode
