@@ -39,6 +39,7 @@ const (
 	XPathStrategyControlRange  XPathStrategy = "control-range"
 	XPathStrategyFileIf        XPathStrategy = "file-if"
 	XPathStrategyInlineRegex   XPathStrategy = "inline-regex"
+	XPathStrategyAppendWith    XPathStrategy = "append-with"
 )
 
 type XPathConfig struct {

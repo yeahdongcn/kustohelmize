@@ -52,7 +52,7 @@ examples: build kubernetes-split-yaml ## Test the binary against the examples.
 	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
 
 .PHONY: test
-test: go-test build kubernetes-split-yaml 0100 0200 0300 0400 0500 0600 ## Test the binary.
+test: go-test build kubernetes-split-yaml 0100 0200 0300 0400 0500 0600 0700 ## Test the binary.
 
 .PHONY: go-test
 go-test:
@@ -62,31 +62,43 @@ go-test:
 0100: build
 	$(KUSTOHELMIZE) create --from=test/testdata/0100_deployment.yaml test/output/0100/mychart
 	$(HELM) lint test/output/0100/mychart
+	$(HELM) install --dry-run --generate-name test/output/0100/mychart -n default
 
 .PHONY: 0200
 0200: build
 	$(KUSTOHELMIZE) create --from=test/testdata/0200_sample.yaml --version=1.0.0 --app-version=1.0.0 --description="Helm chart for testing" test/output/0200/mychart
-	$(HELM) lint test/output/0100/mychart
+	$(HELM) lint test/output/0200/mychart
+	$(HELM) install --dry-run --generate-name test/output/0200/mychart -n default
 
 .PHONY: 0300
 0300: build
 	$(KUSTOHELMIZE) create --from=test/testdata/0300_sample.yaml --suppress-namespace --version=1.0.0 --app-version=1.0.0 --description="Helm chart with suppressed namespace" test/output/0300/no-ns-chart
-	$(HELM) lint test/output/0100/mychart
+	$(HELM) lint test/output/0300/no-ns-chart
+	$(HELM) install --dry-run --generate-name test/output/0300/no-ns-chart -n default
 
 .PHONY: 0400
 0400: build
 	$(KUSTOHELMIZE) create --from=test/testdata/0400_issuer.yaml test/output/0400/mychart
-	$(HELM) lint test/output/0100/mychart
+	$(HELM) lint test/output/0400/mychart
+	$(HELM) install --dry-run --generate-name test/output/0400/mychart -n default
 
 .PHONY: 0500
 0500: build
 	$(KUSTOHELMIZE) create --from=test/testdata/0500_deployment.yaml test/output/0500/mychart
-	$(HELM) lint test/output/0100/mychart
+	$(HELM) lint test/output/0500/mychart
+	$(HELM) install --dry-run --generate-name test/output/0500/mychart -n default
 
 .PHONY: 0600
 0600: build
 	$(KUSTOHELMIZE) create --from=test/testdata/0500_deployment.yaml test/output/0600/mychart
-	$(HELM) lint test/output/0100/mychart
+	$(HELM) lint test/output/0600/mychart
+	$(HELM) install --dry-run --generate-name test/output/0600/mychart -n default
+
+.PHONY: 0700
+0700: build
+	$(KUSTOHELMIZE) create --from=test/testdata/0500_deployment.yaml test/output/0700/mychart
+	$(HELM) lint test/output/0700/mychart
+	$(HELM) install --dry-run --generate-name test/output/0700/mychart -n default
 
 ##@ Tools
 

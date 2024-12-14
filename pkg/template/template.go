@@ -16,7 +16,7 @@ import (
 	"github.com/yeahdongcn/kustohelmize/pkg/chart"
 	"github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/util"
-	"gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v2"
 )
 
 type context struct {
@@ -226,9 +226,7 @@ func (p *Processor) processMapOrDie(k reflect.Value, v reflect.Value, nindent in
 	}
 	xpathConfig := xpathConfigs[0]
 	switch xpathConfig.Strategy {
-	case config.XPathStrategyInline:
-		fallthrough
-	case config.XPathStrategyInlineYAML:
+	case config.XPathStrategyInline, config.XPathStrategyInlineYAML:
 		key := fmt.Sprintf(singleLineKeyFormat, k)
 		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
@@ -290,9 +288,7 @@ func (p *Processor) processMapOrDie(k reflect.Value, v reflect.Value, nindent in
 		value := fmt.Sprintf(withFormat, key, k, (nindent+1)*2)
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
-	case config.XPathStrategyControlIf:
-		fallthrough
-	case config.XPathStrategyControlIfYAML:
+	case config.XPathStrategyControlIf, config.XPathStrategyControlIfYAML:
 		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
 		condition, isNegative := p.config.GetFormattedCondition(&xpathConfig, p.context.prefix)
 		if condition == "" {
@@ -303,19 +299,12 @@ func (p *Processor) processMapOrDie(k reflect.Value, v reflect.Value, nindent in
 
 		var value string
 		if key == "" && condition != "" {
-			out, err := yaml.Marshal(v.Interface())
-			if err != nil {
-				panic(err)
-			}
-			v := strings.TrimRight(string(out), "\n")
-			if strings.Contains(v, "\n") {
-				v = fmt.Sprintf("\n%s", v)
-			}
+			vStr := util.ToStringOrDie(v)
 			format := ifOriginFormat
 			if isNegative {
 				format = ifNotOriginFormat
 			}
-			value = fmt.Sprintf(format, condition, k, v)
+			value = fmt.Sprintf(format, condition, k, vStr)
 		} else {
 			if xpathConfig.Strategy == config.XPathStrategyControlIf {
 				format := ifFormat
@@ -348,6 +337,15 @@ func (p *Processor) processMapOrDie(k reflect.Value, v reflect.Value, nindent in
 	case config.XPathStrategyInlineRegex:
 		// Processed by slice
 		return false
+	case config.XPathStrategyAppendWith:
+		vStr := util.ToStringOrDie(v)
+		value := fmt.Sprintf("%s:%s", k, vStr)
+		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
+
+		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
+		value = fmt.Sprintf(appendWithFormat, key, nindent*2)
+		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
+		return true
 	default:
 		panic(fmt.Sprintf("Unknown XPath strategy: %s", xpathConfig.Strategy))
 	}
