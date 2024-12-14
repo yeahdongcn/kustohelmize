@@ -10,7 +10,6 @@ require (
 	github.com/spf13/cobra v1.5.0
 	github.com/stretchr/testify v1.7.2
 	go.uber.org/zap v1.19.1
-	gopkg.in/yaml.v1 v1.0.0-20140924161607-9f9df34309c0
 	gopkg.in/yaml.v2 v2.4.0
 	helm.sh/helm/v3 v3.9.1
 	k8s.io/helm v2.17.0+incompatible
