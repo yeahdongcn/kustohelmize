@@ -219,7 +219,8 @@ func (p *Processor) processSlice(v reflect.Value, xpath config.XPath, nindent in
 	}
 }
 
-func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.XPath, xpathConfigs config.XPathConfigs, hasSliceIndex bool) bool {
+func (p *Processor) processMapOrDie(k reflect.Value, v reflect.Value, nindent int,
+	xpath config.XPath, xpathConfigs config.XPathConfigs, hasSliceIndex bool) bool {
 	if len(xpathConfigs) == 0 {
 		return false
 	}
@@ -228,7 +229,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.X
 	case config.XPathStrategyInline:
 		fallthrough
 	case config.XPathStrategyInlineYAML:
-		key := fmt.Sprintf(singleLineKeyFormat, v)
+		key := fmt.Sprintf(singleLineKeyFormat, k)
 		fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
@@ -259,10 +260,8 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.X
 		}
 		fmt.Fprintln(p.context.out, value)
 		return true
-	case config.XPathStrategyNewline:
-		fallthrough
-	case config.XPathStrategyNewlineYAML:
-		key := fmt.Sprintf(newlineKeyFormat, v)
+	case config.XPathStrategyNewline, config.XPathStrategyNewlineYAML:
+		key := fmt.Sprintf(newlineKeyFormat, k)
 		fmt.Fprintln(p.context.out, indentsFromSlice(key, nindent, hasSliceIndex))
 
 		var value string
@@ -288,32 +287,49 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.X
 		// tolerations:
 		//   {{- toYaml . | nindent 8 }}
 		// {{- end }}
-		value := fmt.Sprintf(withFormat, key, v, (nindent+1)*2)
+		value := fmt.Sprintf(withFormat, key, k, (nindent+1)*2)
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
 	case config.XPathStrategyControlIf:
 		fallthrough
 	case config.XPathStrategyControlIfYAML:
 		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
-
 		condition, isNegative := p.config.GetFormattedCondition(&xpathConfig, p.context.prefix)
 		if condition == "" {
+			// If no condition is specified, fall back to the key
 			condition = key
+			isNegative = false
 		}
 
 		var value string
-		if xpathConfig.Strategy == config.XPathStrategyControlIf {
-			format := ifFormat
-			if isNegative {
-				format = ifNotFormat
+		if key == "" && condition != "" {
+			out, err := yaml.Marshal(v.Interface())
+			if err != nil {
+				panic(err)
 			}
-			value = fmt.Sprintf(format, condition, v, key)
-		} else { // XPathStrategyControlIfYAML
-			format := ifYAMLFormat
-			if isNegative {
-				format = ifNotYAMLFormat
+			v := strings.TrimRight(string(out), "\n")
+			if strings.Contains(v, "\n") {
+				v = fmt.Sprintf("\n%s", v)
 			}
-			value = fmt.Sprintf(format, condition, v, key, (nindent+1)*2)
+			format := ifOriginFormat
+			if isNegative {
+				format = ifNotOriginFormat
+			}
+			value = fmt.Sprintf(format, condition, k, v)
+		} else {
+			if xpathConfig.Strategy == config.XPathStrategyControlIf {
+				format := ifFormat
+				if isNegative {
+					format = ifNotFormat
+				}
+				value = fmt.Sprintf(format, condition, k, key)
+			} else { // XPathStrategyControlIfYAML
+				format := ifYAMLFormat
+				if isNegative {
+					format = ifNotYAMLFormat
+				}
+				value = fmt.Sprintf(format, condition, k, key, (nindent+1)*2)
+			}
 		}
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
@@ -322,7 +338,7 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.X
 		// {{- range .Values.imagePullSecrets }}
 		//   - name: {{ . }}
 		// {{- end }}
-		value := fmt.Sprintf(rangeFormat, v, key)
+		value := fmt.Sprintf(rangeFormat, k, key)
 		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
 		return true
 	case config.XPathStrategyFileIf:
@@ -337,9 +353,9 @@ func (p *Processor) processMapOrDie(v reflect.Value, nindent int, xpath config.X
 	}
 }
 
-func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
+func (p *Processor) processMap(k reflect.Value, v reflect.Value, nindent int, xpath config.XPath, hasSliceIndex *bool) bool {
 	// XXX: The priority of file config is greater than global config.
-	if p.processMapOrDie(v, nindent, xpath, p.context.fileConfig[xpath], *hasSliceIndex) {
+	if p.processMapOrDie(k, v, nindent, xpath, p.context.fileConfig[xpath], *hasSliceIndex) {
 		p.logger.V(10).Info("Processed map for file config", "xpath", xpath)
 		// XXX: For the first element only.
 		if *hasSliceIndex {
@@ -347,7 +363,7 @@ func (p *Processor) processMap(v reflect.Value, nindent int, xpath config.XPath,
 		}
 		return true
 	}
-	if p.processMapOrDie(v, nindent, xpath, p.config.GlobalConfig[xpath], *hasSliceIndex) {
+	if p.processMapOrDie(k, v, nindent, xpath, p.config.GlobalConfig[xpath], *hasSliceIndex) {
 		p.logger.V(10).Info("Processed map for global config", "xpath", xpath)
 		// XXX: For the first element only.
 		if *hasSliceIndex {
@@ -364,7 +380,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 	if root.IsRoot() {
 		// Process root level map for existence of file-if
 		hasSliceIndex := false
-		if p.processMap(reflect.ValueOf(""), 0, root, &hasSliceIndex) {
+		if p.processMap(reflect.ValueOf(""), reflect.ValueOf(""), 0, root, &hasSliceIndex) {
 			defer fmt.Fprintln(p.context.out, endDelimited)
 		}
 	}
@@ -413,7 +429,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 		for _, kv := range kvs {
 			mapKey := util.ReflectValue(kv).String()
 			xpath := root.NewChild(mapKey, sliceIndex)
-			if !p.processMap(kv, nindent, xpath, &hasSliceIndex) {
+			if !p.processMap(kv, v.MapIndex(kv), nindent, xpath, &hasSliceIndex) {
 				key := fmt.Sprintf(singleLineKeyFormat, kv)
 				if hasSliceIndex {
 					fmt.Fprint(p.context.out, indentsFromSlice(key, nindent, true))
