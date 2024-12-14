@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -185,7 +184,7 @@ func (cc *ChartConfig) Values() (string, error) {
 	// 2. FileConfig
 	root := GenericMap{}
 	for filename, fileConfig := range cc.FileConfig {
-		key := util.LowerCamelFilenameWithoutExt(filepath.Base(filename))
+		key := util.LowerCamelFilenameWithoutExt(filename)
 		root[key] = GenericMap{}
 		fileRoot := root[key].(GenericMap)
 

@@ -72,12 +72,12 @@ func (p *Processor) Process() error {
 	for source, fileConfig := range p.config.FileConfig {
 		filename := filepath.Base(source)
 
-		if p.suppressNamespace && util.IsNamespaceDefinition(filename) {
+		if p.suppressNamespace && util.IsNamespaceDefinition(source) {
 			// Don't emit namespaces
 			continue
 		}
 
-		if util.IsCustomResourceDefinition(filename) {
+		if util.IsCustomResourceDefinition(source) {
 			if err := os.MkdirAll(p.crdsDir, 0755); err != nil {
 				p.logger.Error(err, "Failed to create CRD directory")
 				return err
@@ -117,7 +117,7 @@ func (p *Processor) Process() error {
 
 		p.context = context{
 			out:              file,
-			prefix:           util.LowerCamelFilenameWithoutExt(filename),
+			prefix:           util.LowerCamelFilenameWithoutExt(source),
 			fileConfig:       fileConfig,
 			setRoleNamespace: false,
 		}
