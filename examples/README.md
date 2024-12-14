@@ -270,7 +270,22 @@ We also introduce the `strategy` in the configuration file.
     {{- end }}
     ```
 
-    You can use `conditionValue` to set a default value for the condition. If not specified, the condition defaults to false and is stored in `values.yaml`.
+    You can use `conditionValue` to set a default value for the condition. If not specified, the condition defaults to false and is stored in `values.yaml`.</br>
+    `condition` can be used without a `key` and with `!` to negate the condition.
+
+    ```yaml
+    spec.replicas:
+    - strategy: control-if
+      condition: "!autoscaling.enable"
+    ```
+
+    This generates the following Helm template:
+
+    ```yaml
+    {{- if not .Values.nginxDeploymentDeployment.autoscaling.enable }}
+    replicas: 2
+    {{- end }}
+    ```
 
 1. `control-if-yaml`
 
