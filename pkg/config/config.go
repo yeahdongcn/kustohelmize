@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"path/filepath"
 	"sort"
 	"strings"
 
@@ -40,6 +39,7 @@ const (
 	XPathStrategyControlRange  XPathStrategy = "control-range"
 	XPathStrategyFileIf        XPathStrategy = "file-if"
 	XPathStrategyInlineRegex   XPathStrategy = "inline-regex"
+	XPathStrategyAppendWith    XPathStrategy = "append-with"
 )
 
 type XPathConfig struct {
@@ -185,7 +185,7 @@ func (cc *ChartConfig) Values() (string, error) {
 	// 2. FileConfig
 	root := GenericMap{}
 	for filename, fileConfig := range cc.FileConfig {
-		key := util.LowerCamelFilenameWithoutExt(filepath.Base(filename))
+		key := util.LowerCamelFilenameWithoutExt(filename)
 		root[key] = GenericMap{}
 		fileRoot := root[key].(GenericMap)
 
@@ -199,10 +199,7 @@ func (cc *ChartConfig) Values() (string, error) {
 
 				kvs := []kvPair{{c.Key, c.Value}}
 				if c.Condition != "" {
-					condition := c.Condition
-					if strings.HasPrefix(c.Condition, "!") {
-						condition = c.Condition[1:]
-					}
+					condition := strings.TrimPrefix(c.Condition, "!")
 					kvs = append(kvs, kvPair{condition, c.ConditionValue})
 				}
 				for _, kv := range kvs {
@@ -275,46 +272,38 @@ func (cc *ChartConfig) Values() (string, error) {
 	return str, nil
 }
 
-func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (string, bool) {
-	isNegative := false
-
-	if xc.Condition == "" {
-		return "", isNegative
-	}
-
-	condition := xc.Condition
-	if strings.HasPrefix(condition, "!") {
-		isNegative = true
-		condition = condition[1:]
-	}
-	key, keyType := c.determineKeyType(condition)
-	if keyType == KeyTypeFile {
-		key = fmt.Sprintf(".Values.%s.%s", prefix, key)
-	} else if keyType == KeyTypeShared {
-		key = fmt.Sprintf(".Values.%s", key)
-	} else if keyType == KeyTypeNotFound {
-		if xc.Strategy == XPathStrategyControlIf || xc.Strategy == XPathStrategyControlIfYAML {
-			key = fmt.Sprintf(".Values.%s", key)
-		} else {
-			panic(fmt.Sprintf("%s not found", xc.Key))
+func (c *ChartConfig) formatKey(key, prefix string, keyType KeyType, strategy XPathStrategy) string {
+	switch keyType {
+	case KeyTypeFile:
+		return fmt.Sprintf(".Values.%s.%s", prefix, key)
+	case KeyTypeShared, KeyTypeNotFound:
+		formattedKey := fmt.Sprintf(".Values.%s", key)
+		if keyType == KeyTypeNotFound && strategy != XPathStrategyControlIf && strategy != XPathStrategyControlIfYAML {
+			panic(fmt.Sprintf("%s not found", key))
 		}
+		return formattedKey
+	default:
+		return key
 	}
+}
+
+func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (string, bool) {
+	isNegative := strings.HasPrefix(xc.Condition, "!")
+	condition := strings.TrimPrefix(xc.Condition, "!")
+	key, keyType := c.determineKeyType(condition)
+	if key == "" {
+		return key, isNegative
+	}
+	key = c.formatKey(key, prefix, keyType, xc.Strategy)
 	return key, isNegative
 }
 
 func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix string) (string, KeyType) {
 	key, keyType := c.determineKeyType(xc.Key)
-	if keyType == KeyTypeFile {
-		key = fmt.Sprintf(".Values.%s.%s", prefix, key)
-	} else if keyType == KeyTypeShared {
-		key = fmt.Sprintf(".Values.%s", key)
-	} else if keyType == KeyTypeNotFound {
-		if xc.Strategy == XPathStrategyControlIf || xc.Strategy == XPathStrategyControlIfYAML {
-			key = fmt.Sprintf(".Values.%s", key)
-		} else {
-			panic(fmt.Sprintf("%s not found", xc.Key))
-		}
+	if key == "" {
+		return key, keyType
 	}
+	key = c.formatKey(key, prefix, keyType, xc.Strategy)
 	if xc.DefaultValue != nil {
 		key = fmt.Sprintf("%s | default %s", key, xc.DefaultValue)
 	}

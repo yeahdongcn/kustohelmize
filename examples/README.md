@@ -270,7 +270,22 @@ We also introduce the `strategy` in the configuration file.
     {{- end }}
     ```
 
-    You can use `conditionValue` to set a default value for the condition. If not specified, the condition defaults to false and is stored in `values.yaml`.
+    You can use `conditionValue` to set a default value for the condition. If not specified, the condition defaults to false and is stored in `values.yaml`.</br>
+    `condition` can be used without a `key` and with `!` to negate the condition.
+
+    ```yaml
+    spec.replicas:
+    - strategy: control-if
+      condition: "!autoscaling.enable"
+    ```
+
+    This generates the following Helm template:
+
+    ```yaml
+    {{- if not .Values.nginxDeploymentDeployment.autoscaling.enable }}
+    replicas: 2
+    {{- end }}
+    ```
 
 1. `control-if-yaml`
 
@@ -407,3 +422,25 @@ We also introduce the `strategy` in the configuration file.
       ```
 
     The match group in the regex `(\d+)` is templated with the `.Values` identified by `key`. Currently, only one replacement per list item is possible.
+
+1. `append-with`
+
+    Allows appending a list of values to an existing list in the Helm template.
+
+    ```yaml
+    spec.template.spec.containers[0].ports:
+    - strategy: append-with
+      key: sharedValues.ports
+    ```
+
+    This generates the following Helm template:
+
+    ```yaml
+    ports:
+    - containerPort: 80
+      name: http
+      protocol: TCP
+    {{- with .Values.ports }}
+    {{- toYaml . | nindent 10 }}
+    {{- end }}
+    ```

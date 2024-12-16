@@ -1,9 +1,12 @@
 package util
 
 import (
+	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
+
+	"gopkg.in/yaml.v2"
 )
 
 // Match xPath of containers/initContainers
@@ -42,9 +45,9 @@ func ReflectValue(v reflect.Value) reflect.Value {
 // Take the reflected map keys which have no guaranteed order and sort them
 // Apply special ordering for certain keys at root, metadata or container level,
 // and sort remaining keys naturally.
-func SortedMapKeys(m reflect.Value, root string) []reflect.Value {
+func SortedMapKeys(v reflect.Value, root string) []reflect.Value {
 
-	if ReflectValue(m).Kind() != reflect.Map {
+	if ReflectValue(v).Kind() != reflect.Map {
 		panic("Expected map")
 	}
 
@@ -58,7 +61,7 @@ func SortedMapKeys(m reflect.Value, root string) []reflect.Value {
 		order = metadataFirst
 	}
 
-	keyValues := m.MapKeys()
+	keyValues := v.MapKeys()
 
 	// Rubbish bubble sort - but there's never more than 20 odd keys to sort.
 	for i := 0; i < len(keyValues); i++ {
@@ -81,4 +84,16 @@ func SortedMapKeys(m reflect.Value, root string) []reflect.Value {
 	}
 
 	return keyValues
+}
+
+func ToStringOrDie(v reflect.Value) string {
+	out, err := yaml.Marshal(v.Interface())
+	if err != nil {
+		panic(err)
+	}
+	ret := strings.TrimRight(string(out), "\n")
+	if strings.Contains(ret, "\n") {
+		ret = fmt.Sprintf("\n%s", ret)
+	}
+	return ret
 }
