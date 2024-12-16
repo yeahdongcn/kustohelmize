@@ -17,7 +17,7 @@ import (
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
 	"github.com/yeahdongcn/kustohelmize/pkg/template"
 	"github.com/yeahdongcn/kustohelmize/pkg/value"
-	"gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/cmd/helm/require"
 	"helm.sh/helm/v3/pkg/chart"
 	"helm.sh/helm/v3/pkg/chartutil"

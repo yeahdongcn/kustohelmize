@@ -14,4 +14,3 @@ spec:
   selfSigned: {}
   ca:
     secretName: ca-key-pair
-  tesla: 3.14

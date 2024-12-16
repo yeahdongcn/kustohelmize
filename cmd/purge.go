@@ -9,7 +9,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/spf13/cobra"
 	cfg "github.com/yeahdongcn/kustohelmize/pkg/config"
-	"gopkg.in/yaml.v1"
+	"gopkg.in/yaml.v2"
 	"helm.sh/helm/v3/cmd/helm/require"
 )
 

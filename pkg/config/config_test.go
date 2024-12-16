@@ -172,6 +172,7 @@ func TestValidateRootFileConfigCanOnlyUseFileIf(t *testing.T) {
 		XPathStrategyControlIfYAML: require.Error,
 		XPathStrategyControlWith:   require.Error,
 		XPathStrategyControlRange:  require.Error,
+		XPathStrategyAppendWith:    require.Error,
 		XPathStrategyFileIf:        require.NoError,
 	}
 
@@ -215,6 +216,7 @@ func TestValidateNonRootFileConfigCannotUseFileIf(t *testing.T) {
 		XPathStrategyControlIfYAML: require.NoError,
 		XPathStrategyControlWith:   require.NoError,
 		XPathStrategyControlRange:  require.NoError,
+		XPathStrategyAppendWith:    require.NoError,
 		XPathStrategyFileIf:        require.Error,
 	}
 

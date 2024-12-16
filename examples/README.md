@@ -422,3 +422,25 @@ We also introduce the `strategy` in the configuration file.
       ```
 
     The match group in the regex `(\d+)` is templated with the `.Values` identified by `key`. Currently, only one replacement per list item is possible.
+
+1. `append-with`
+
+    Allows appending a list of values to an existing list in the Helm template.
+
+    ```yaml
+    spec.template.spec.containers[0].ports:
+    - strategy: append-with
+      key: sharedValues.ports
+    ```
+
+    This generates the following Helm template:
+
+    ```yaml
+    ports:
+    - containerPort: 80
+      name: http
+      protocol: TCP
+    {{- with .Values.ports }}
+    {{- toYaml . | nindent 10 }}
+    {{- end }}
+    ```
