@@ -415,14 +415,14 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 						if condition != "" {
 							isConditional = true
 							var value string
-							if isNegative {
-								value = fmt.Sprintf(fileIfFormat, condition)
-							} else {
-								value = fmt.Sprintf(fileIfNotFormat, condition)
-							}
 							if i == 0 {
-								value = fmt.Sprintf("\n%s", value)
+								value = "\n"
 							}
+							format := fileIfFormat
+							if isNegative {
+								format = fileIfNotFormat
+							}
+							value += fmt.Sprintf(format, condition)
 							fmt.Fprintln(p.context.out, indent(value, nindent))
 						}
 					}

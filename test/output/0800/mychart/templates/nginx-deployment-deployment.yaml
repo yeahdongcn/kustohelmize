@@ -18,12 +18,12 @@ spec:
         - name: nginx
           image: nginx:latest
           ports:             
-            {{- if not .Values.http.enabled }}
+            {{- if .Values.http.enabled }}
             - containerPort: 80
               name: http
               protocol: TCP
             {{- end }}
-            {{- if not .Values.https.enabled }}
+            {{- if .Values.https.enabled }}
             - containerPort: 443
               name: https
               protocol: TCP
