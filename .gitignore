@@ -18,6 +18,7 @@ vendor/
 bin/
 kyaml/kyaml
 kubernetes-split-yaml
+kustohelmize
 
 # vscode extensions
 .vscode

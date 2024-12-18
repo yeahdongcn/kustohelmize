@@ -77,6 +77,13 @@ func (xpath XPath) IsRoot() bool {
 	return xpath == XPathRoot
 }
 
+func (xpath XPath) NewElement(sliceIndex int) XPath {
+	if sliceIndex == XPathSliceIndexNone {
+		return xpath
+	}
+	return XPath(fmt.Sprintf("%s[%d]", xpath, sliceIndex))
+}
+
 func (xpath XPath) NewChild(s string, sliceIndex int) XPath {
 	if xpath.IsRoot() {
 		return XPath(s)
