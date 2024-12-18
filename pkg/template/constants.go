@@ -52,7 +52,8 @@ const (
 		"%s\n" +
 		endDelimited
 
-	fileIfFormat = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n"
+	fileIfFormat    = leftDelimiterTrimSpaceTrailing + "if %s" + rightDelimiter + "\n"
+	fileIfNotFormat = leftDelimiterTrimSpaceTrailing + "if not %s" + rightDelimiter + "\n"
 
 	rangeFormat = "%s:\n" + leftDelimiterTrimSpaceTrailing + "range %s" + rightDelimiter + "\n" +
 		"  - name: " + leftDelimiter + "." + rightDelimiter + "\n" +

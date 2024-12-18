@@ -17,13 +17,14 @@ spec:
       containers:         
         - name: nginx
           image: nginx:latest
-          ports:
-          - containerPort: 80
-            name: http
-            protocol: TCP
-          - containerPort: 443
-            name: https
-            protocol: TCP
-          {{- with .Values.ports }}
-          {{- toYaml . | nindent 10 }}
-          {{- end }}
+          ports:             
+            {{- if not .Values.http.enabled }}
+            - containerPort: 80
+              name: http
+              protocol: TCP
+            {{- end }}
+            {{- if not .Values.https.enabled }}
+            - containerPort: 443
+              name: https
+              protocol: TCP
+            {{- end }}
