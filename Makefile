@@ -102,7 +102,7 @@ go-test:
 
 .PHONY: 0800
 0800: build
-	$(KUSTOHELMIZE) create --from=test/testdata/0500_deployment.yaml test/output/0800/mychart
+	$(KUSTOHELMIZE) create --from=test/testdata/0800_deployment.yaml test/output/0800/mychart
 	$(HELM) lint test/output/0800/mychart
 	$(HELM) install --dry-run --generate-name test/output/0800/mychart -n default
 

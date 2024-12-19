@@ -189,6 +189,38 @@ func (p *Processor) processSlice(v reflect.Value, xpath config.XPath, nindent in
 	for i := 0; i < v.Len(); i++ {
 		item := util.ReflectValue(v.Index(i))
 		str := item.String()
+		itemXpathConfigs := p.context.fileConfig[xpath.NewElement(i)]
+		if len(itemXpathConfigs) > 0 {
+			for _, itemXpathConfig := range itemXpathConfigs {
+				isConditional := false
+				switch itemXpathConfig.Strategy {
+				// We only support control-if for slice elements
+				case config.XPathStrategyControlIf:
+					condition, isNegative := p.config.GetFormattedCondition(&itemXpathConfig, p.context.prefix)
+					if condition != "" {
+						isConditional = true
+						var value string
+						format := fileIfFormat
+						if isNegative {
+							format = fileIfNotFormat
+						}
+						value += fmt.Sprintf(format, condition)
+						fmt.Fprintln(p.context.out, indent(value, nindent))
+					}
+				}
+				if i == 0 && !isConditional {
+					fmt.Fprint(p.context.out, indent(slicePrefixFirstLineFormat, nindent))
+				} else {
+					fmt.Fprint(p.context.out, indent(slicePrefixOtherLineFormat, nindent))
+				}
+				p.walk(v.Index(i), nindent+1, xpath, i)
+
+				if isConditional {
+					fmt.Fprintln(p.context.out, indent(endDelimited, nindent))
+				}
+			}
+			continue
+		}
 		if len(xpathConfigs) == 0 {
 			p.printSliceScalar(str, nindent)
 		} else {
