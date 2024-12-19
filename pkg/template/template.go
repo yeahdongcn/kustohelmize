@@ -370,14 +370,8 @@ func (p *Processor) processMapOrDie(k reflect.Value, v reflect.Value, nindent in
 		// Processed by slice
 		return false
 	case config.XPathStrategyAppendWith:
-		vStr := util.ToStringOrDie(v)
-		value := fmt.Sprintf("%s:%s", k, vStr)
-		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
-
-		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
-		value = fmt.Sprintf(appendWithFormat, key, nindent*2)
-		fmt.Fprintln(p.context.out, indentsFromSlice(value, nindent, hasSliceIndex))
-		return true
+		// Processed by slice
+		return false
 	default:
 		panic(fmt.Sprintf("Unknown XPath strategy: %s", xpathConfig.Strategy))
 	}
@@ -469,6 +463,15 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 
 				if isConditional {
 					fmt.Fprintln(p.context.out, indent(endDelimited, nindent))
+				}
+			}
+			rootXpathConfigs := p.context.fileConfig[root]
+			if len(rootXpathConfigs) > 0 {
+				rootXpathConfig := rootXpathConfigs[0]
+				if rootXpathConfig.Strategy == config.XPathStrategyAppendWith {
+					key, _ := p.config.GetFormattedKeyWithDefaultValue(&rootXpathConfig, p.context.prefix)
+					value := fmt.Sprintf(appendWithFormat, key, nindent*2)
+					fmt.Fprintln(p.context.out, indent(value, nindent))
 				}
 			}
 		}
