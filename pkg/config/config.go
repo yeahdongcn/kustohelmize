@@ -42,23 +42,31 @@ const (
 	XPathStrategyAppendWith    XPathStrategy = "append-with"
 )
 
-type XPathConfig struct {
-	Strategy       XPathStrategy   `yaml:"strategy"`
-	Key            string          `yaml:"key"`
-	Value          interface{}     `yaml:"value,omitempty"`
-	DefaultValue   interface{}     `yaml:"defaultValue,omitempty"`
-	Regex          string          `yaml:"regex,omitempty"`
-	RegexCompiled  *regexp2.Regexp `yaml:"-"`
-	Condition      string          `yaml:"condition,omitempty"`
-	ConditionValue bool            `yaml:"conditionValue,omitempty" default:"false"`
+type Condition struct {
+	Key   string `yaml:"key,omitempty"`
+	Value bool   `yaml:"value,omitempty"`
 }
 
-func (x *XPathConfig) ValueRequiresQuote() bool {
-	if x.Value == nil {
+type XPathConfig struct {
+	Strategy          XPathStrategy   `yaml:"strategy"`
+	Key               string          `yaml:"key"`
+	Value             interface{}     `yaml:"value,omitempty"`
+	DefaultValue      interface{}     `yaml:"defaultValue,omitempty"`
+	Regex             string          `yaml:"regex,omitempty"`
+	RegexCompiled     *regexp2.Regexp `yaml:"-"`
+	Conditions        []Condition     `yaml:"conditions,omitempty"`
+	ConditionOperator *string         `yaml:"conditionOperator,omitempty"`
+	// Deprecated
+	Condition      string `yaml:"condition,omitempty"`
+	ConditionValue bool   `yaml:"conditionValue,omitempty"`
+}
+
+func (xc *XPathConfig) ValueRequiresQuote() bool {
+	if xc.Value == nil {
 		return false
 	}
 
-	switch value := x.Value.(type) {
+	switch value := xc.Value.(type) {
 	case bool, int, float64:
 		return true
 	case string:
@@ -206,8 +214,12 @@ func (cc *ChartConfig) Values() (string, error) {
 
 				kvs := []kvPair{{c.Key, c.Value}}
 				if c.Condition != "" {
-					condition := strings.TrimPrefix(c.Condition, "!")
-					kvs = append(kvs, kvPair{condition, c.ConditionValue})
+					conditionKey := strings.TrimPrefix(c.Condition, "!")
+					kvs = append(kvs, kvPair{conditionKey, c.ConditionValue})
+				}
+				for _, condition := range c.Conditions {
+					conditionKey := strings.TrimPrefix(condition.Key, "!")
+					kvs = append(kvs, kvPair{conditionKey, condition.Value})
 				}
 				for _, kv := range kvs {
 					substrings := strings.Split(kv.Key, XPathSeparator)
@@ -295,14 +307,39 @@ func (c *ChartConfig) formatKey(key, prefix string, keyType KeyType, strategy XP
 }
 
 func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (string, bool) {
-	not := strings.HasPrefix(xc.Condition, "!")
-	condition := strings.TrimPrefix(xc.Condition, "!")
-	key, keyType := c.determineKeyType(condition)
-	if key == "" {
-		return key, not
+	formatCondition := func(condition string) (string, bool) {
+		not := strings.HasPrefix(condition, "!")
+		conditionKey := strings.TrimPrefix(condition, "!")
+		key, keyType := c.determineKeyType(conditionKey)
+		if key == "" {
+			return "", not
+		}
+		return c.formatKey(key, prefix, keyType, xc.Strategy), not
 	}
-	key = c.formatKey(key, prefix, keyType, xc.Strategy)
-	return key, not
+
+	formatMultipleConditions := func(conditions []Condition) (string, bool) {
+		if xc.ConditionOperator == nil {
+			panic(fmt.Sprintf("conditionOperator is nil for multiple conditions: %v", conditions))
+		}
+
+		keys := make([]string, len(conditions))
+		for i, condition := range conditions {
+			key, _ := formatCondition(condition.Key)
+			keys[i] = key
+		}
+
+		return fmt.Sprintf("%s %s", *xc.ConditionOperator, strings.Join(keys, " ")), false
+	}
+
+	if xc.Condition != "" {
+		return formatCondition(xc.Condition)
+	} else if len(xc.Conditions) > 0 {
+		if len(xc.Conditions) == 1 {
+			return formatCondition(xc.Conditions[0].Key)
+		}
+		return formatMultipleConditions(xc.Conditions)
+	}
+	return "", false
 }
 
 func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix string) (string, KeyType) {

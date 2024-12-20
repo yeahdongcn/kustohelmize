@@ -13,8 +13,7 @@ func TestKeyExist2(t *testing.T) {
 	config := NewChartConfig(logger, "chart")
 	config.SharedValues["replicas"] = 1
 	xc := XPathConfig{
-		Strategy: XPathStrategyInline,
-		Key:      fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "replicas"),
+		Key: fmt.Sprintf("%s%s%s", sharedValuesPrefix, XPathSeparator, "replicas"),
 	}
 	key, exist := config.keyExist(xc.Key)
 	require.True(t, exist)

@@ -112,6 +112,12 @@ go-test:
 	$(HELM) lint test/output/0900/mychart
 	$(HELM) install --dry-run --generate-name test/output/0900/mychart -n default
 
+.PHONY: 1000
+1000: build
+	$(KUSTOHELMIZE) create --from=test/testdata/0800_deployment.yaml test/output/1000/mychart
+	$(HELM) lint test/output/1000/mychart
+	$(HELM) install --dry-run --generate-name test/output/1000/mychart -n default
+
 ##@ Tools
 
 KUBERNETES-SPLIT-YAML = $(shell pwd)/bin/kubernetes-split-yaml
