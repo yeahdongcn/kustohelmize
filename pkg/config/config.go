@@ -295,14 +295,14 @@ func (c *ChartConfig) formatKey(key, prefix string, keyType KeyType, strategy XP
 }
 
 func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (string, bool) {
-	isNegative := strings.HasPrefix(xc.Condition, "!")
+	not := strings.HasPrefix(xc.Condition, "!")
 	condition := strings.TrimPrefix(xc.Condition, "!")
 	key, keyType := c.determineKeyType(condition)
 	if key == "" {
-		return key, isNegative
+		return key, not
 	}
 	key = c.formatKey(key, prefix, keyType, xc.Strategy)
-	return key, isNegative
+	return key, not
 }
 
 func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix string) (string, KeyType) {

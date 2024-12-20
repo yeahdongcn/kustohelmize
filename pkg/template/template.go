@@ -183,44 +183,74 @@ func mustReplace(rx *regexp2.Regexp, str string, replacement string) string {
 	return replaced
 }
 
+func (p *Processor) processSliceElement(v reflect.Value, xpath config.XPath, i int, nindent int, nested bool) bool {
+	useCondition := false
+
+	startCondition := func(xc config.XPathConfig) bool {
+		if xc.Strategy == config.XPathStrategyControlIf {
+			condition, not := p.config.GetFormattedCondition(&xc, p.context.prefix)
+			if condition != "" {
+				var value string
+				if !nested && i == 0 {
+					value = "\n"
+				}
+				format := fileIfFormat
+				if not {
+					format = fileIfNotFormat
+				}
+				value += fmt.Sprintf(format, condition)
+				fmt.Fprintln(p.context.out, indent(value, nindent))
+				return true
+			}
+		}
+		return false
+	}
+
+	endCondition := func() {
+		if useCondition {
+			fmt.Fprintln(p.context.out, indent(endDelimited, nindent))
+		}
+	}
+
+	processElement := func() {
+		if i == 0 && !useCondition {
+			fmt.Fprint(p.context.out, indent(slicePrefixFirstLineFormat, nindent))
+		} else {
+			fmt.Fprint(p.context.out, indent(slicePrefixOtherLineFormat, nindent))
+		}
+		p.walk(v.Index(i), nindent+1, xpath, i)
+	}
+
+	itemXpathConfigs := p.context.fileConfig[xpath.NewElement(i)]
+	if len(itemXpathConfigs) > 0 {
+		useCondition = startCondition(itemXpathConfigs[0])
+
+		if nested {
+			processElement()
+			endCondition()
+			return true
+		}
+	}
+
+	if !nested {
+		processElement()
+		endCondition()
+		return true
+	}
+
+	return false
+}
+
 // Process a slice of scalars
 func (p *Processor) processSlice(v reflect.Value, xpath config.XPath, nindent int) {
 	xpathConfigs := p.context.fileConfig[xpath]
 	for i := 0; i < v.Len(); i++ {
-		item := util.ReflectValue(v.Index(i))
-		str := item.String()
-		itemXpathConfigs := p.context.fileConfig[xpath.NewElement(i)]
-		if len(itemXpathConfigs) > 0 {
-			for _, itemXpathConfig := range itemXpathConfigs {
-				isConditional := false
-				switch itemXpathConfig.Strategy {
-				// We only support control-if for slice elements
-				case config.XPathStrategyControlIf:
-					condition, isNegative := p.config.GetFormattedCondition(&itemXpathConfig, p.context.prefix)
-					if condition != "" {
-						isConditional = true
-						var value string
-						format := fileIfFormat
-						if isNegative {
-							format = fileIfNotFormat
-						}
-						value += fmt.Sprintf(format, condition)
-						fmt.Fprintln(p.context.out, indent(value, nindent))
-					}
-				}
-				if i == 0 && !isConditional {
-					fmt.Fprint(p.context.out, indent(slicePrefixFirstLineFormat, nindent))
-				} else {
-					fmt.Fprint(p.context.out, indent(slicePrefixOtherLineFormat, nindent))
-				}
-				p.walk(v.Index(i), nindent+1, xpath, i)
-
-				if isConditional {
-					fmt.Fprintln(p.context.out, indent(endDelimited, nindent))
-				}
-			}
+		if ok := p.processSliceElement(v, xpath, i, nindent, true); ok {
 			continue
 		}
+
+		item := util.ReflectValue(v.Index(i))
+		str := item.String()
 		if len(xpathConfigs) == 0 {
 			p.printSliceScalar(str, nindent)
 		} else {
@@ -322,31 +352,31 @@ func (p *Processor) processMapOrDie(k reflect.Value, v reflect.Value, nindent in
 		return true
 	case config.XPathStrategyControlIf, config.XPathStrategyControlIfYAML:
 		key, _ := p.config.GetFormattedKeyWithDefaultValue(&xpathConfig, p.context.prefix)
-		condition, isNegative := p.config.GetFormattedCondition(&xpathConfig, p.context.prefix)
+		condition, not := p.config.GetFormattedCondition(&xpathConfig, p.context.prefix)
 		if condition == "" {
 			// If no condition is specified, fall back to the key
 			condition = key
-			isNegative = false
+			not = false
 		}
 
 		var value string
 		if key == "" && condition != "" {
 			vStr := util.ToStringOrDie(v)
 			format := ifOriginFormat
-			if isNegative {
+			if not {
 				format = ifNotOriginFormat
 			}
 			value = fmt.Sprintf(format, condition, k, vStr)
 		} else {
 			if xpathConfig.Strategy == config.XPathStrategyControlIf {
 				format := ifFormat
-				if isNegative {
+				if not {
 					format = ifNotFormat
 				}
 				value = fmt.Sprintf(format, condition, k, key)
 			} else { // XPathStrategyControlIfYAML
 				format := ifYAMLFormat
-				if isNegative {
+				if not {
 					format = ifNotYAMLFormat
 				}
 				value = fmt.Sprintf(format, condition, k, key, (nindent+1)*2)
@@ -429,41 +459,7 @@ func (p *Processor) walk(v reflect.Value, nindent int, root config.XPath, sliceI
 			p.processSlice(v, root, nindent)
 		} else {
 			for i := 0; i < v.Len(); i++ {
-				isConditional := false
-
-				xpathConfigs := p.context.fileConfig[root.NewElement(i)]
-				if len(xpathConfigs) > 0 {
-					xpathConfig := xpathConfigs[0]
-					switch xpathConfig.Strategy {
-					// We only support control-if for slice elements
-					case config.XPathStrategyControlIf:
-						condition, isNegative := p.config.GetFormattedCondition(&xpathConfig, p.context.prefix)
-						if condition != "" {
-							isConditional = true
-							var value string
-							if i == 0 {
-								value = "\n"
-							}
-							format := fileIfFormat
-							if isNegative {
-								format = fileIfNotFormat
-							}
-							value += fmt.Sprintf(format, condition)
-							fmt.Fprintln(p.context.out, indent(value, nindent))
-						}
-					}
-				}
-
-				if i == 0 && !isConditional {
-					fmt.Fprint(p.context.out, indent(slicePrefixFirstLineFormat, nindent))
-				} else {
-					fmt.Fprint(p.context.out, indent(slicePrefixOtherLineFormat, nindent))
-				}
-				p.walk(v.Index(i), nindent+1, root, i)
-
-				if isConditional {
-					fmt.Fprintln(p.context.out, indent(endDelimited, nindent))
-				}
+				p.processSliceElement(v, root, i, nindent, false)
 			}
 			rootXpathConfigs := p.context.fileConfig[root]
 			if len(rootXpathConfigs) > 0 {
