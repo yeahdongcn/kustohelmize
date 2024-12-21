@@ -355,6 +355,11 @@ func (c *ChartConfig) Validate() error {
 	// - file-if can only be present at root level file configs
 	// - globalConfig cannot contain a root level entry
 	// - inline-regex must have regex property, and the regex must compile and contain exactly one capture group
+	// - control-if and control-if-yaml with multiple conditions:
+	//   - must have conditionOperator property
+	//   - condition keys cannot start with '!'
+	//   - conditionOperator must be 'and' or 'or'
+	// - other strategies cannot have condition or conditions property
 	if _, ok := c.GlobalConfig[XPathRoot]; ok {
 		return fmt.Errorf("cannot have root level config in GlobalConfig")
 	}
