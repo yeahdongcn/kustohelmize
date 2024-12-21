@@ -318,10 +318,6 @@ func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (str
 	}
 
 	formatMultipleConditions := func(conditions []Condition) (string, bool) {
-		if xc.ConditionOperator == nil {
-			panic(fmt.Sprintf("conditionOperator is nil for multiple conditions: %v", conditions))
-		}
-
 		keys := make([]string, len(conditions))
 		for i, condition := range conditions {
 			key, _ := formatCondition(condition.Key)
@@ -380,6 +376,26 @@ func (c *ChartConfig) Validate() error {
 						return fmt.Errorf("'%s' strategy '%s': regular expression '%s' must have exactly one replacement group", manifest, strategy, xpathConfig.Regex)
 					}
 					xpathConfigs[i].RegexCompiled = rx
+				} else if strategy == XPathStrategyControlIf || strategy == XPathStrategyControlIfYAML {
+					if len(xpathConfig.Conditions) > 1 {
+						if xpathConfig.ConditionOperator == nil {
+							return fmt.Errorf("'%s' strategy '%s' must have 'conditionOperator' property", manifest, strategy)
+						}
+						for _, condition := range xpathConfig.Conditions {
+							if strings.HasPrefix(condition.Key, "!") {
+								return fmt.Errorf("'%s' strategy '%s' condition key '%s' cannot start with '!'", manifest, strategy, condition.Key)
+							}
+						}
+					}
+					if xpathConfig.ConditionOperator != nil {
+						if *xpathConfig.ConditionOperator != "and" && *xpathConfig.ConditionOperator != "or" {
+							return fmt.Errorf("'%s' strategy '%s' conditionOperator must be 'and' or 'or'", manifest, strategy)
+						}
+					}
+				} else {
+					if xpathConfig.Condition != "" || len(xpathConfig.Conditions) > 0 {
+						return fmt.Errorf("'%s' strategy '%s' cannot have 'condition' or 'conditions' property", manifest, strategy)
+					}
 				}
 			}
 		}
