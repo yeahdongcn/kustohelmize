@@ -31,7 +31,7 @@ spec:
             - containerPort: 443
               name: https
               protocol: TCP
-            {{- if and .Values.webhook.enabled .Values.tls.enabled }}
+            {{- if and (not .Values.webhook.disabled) (not .Values.tls.disabled) }}
             - containerPort: 9443
               name: webhook-server
               protocol: TCP

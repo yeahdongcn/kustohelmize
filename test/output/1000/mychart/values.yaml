@@ -15,10 +15,10 @@ ports:
 resources: {}
 securityContext: {}
 tls:
-  enabled: false
+  disabled: false
 tolerations: {}
 webhook:
-  enabled: false
+  disabled: false
 
 nginxDeploymentDeployment: {}
 

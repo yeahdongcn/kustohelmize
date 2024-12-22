@@ -320,8 +320,13 @@ func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (str
 	formatMultipleConditions := func(conditions []Condition) (string, bool) {
 		keys := make([]string, len(conditions))
 		for i, condition := range conditions {
-			key, _ := formatCondition(condition.Key)
-			keys[i] = key
+			key, not := formatCondition(condition.Key)
+			if key != "" {
+				if not {
+					key = fmt.Sprintf("(not %s)", key)
+				}
+				keys[i] = key
+			}
 		}
 
 		return fmt.Sprintf("%s %s", *xc.ConditionOperator, strings.Join(keys, " ")), false
@@ -357,7 +362,6 @@ func (c *ChartConfig) Validate() error {
 	// - inline-regex must have regex property, and the regex must compile and contain exactly one capture group
 	// - control-if and control-if-yaml with multiple conditions:
 	//   - must have conditionOperator property
-	//   - condition keys cannot start with '!'
 	//   - conditionOperator must be 'and' or 'or'
 	// - other strategies cannot have condition or conditions property
 	if _, ok := c.GlobalConfig[XPathRoot]; ok {
@@ -385,11 +389,6 @@ func (c *ChartConfig) Validate() error {
 					if len(xpathConfig.Conditions) > 1 {
 						if xpathConfig.ConditionOperator == nil {
 							return fmt.Errorf("'%s' strategy '%s' must have 'conditionOperator' property", manifest, strategy)
-						}
-						for _, condition := range xpathConfig.Conditions {
-							if strings.HasPrefix(condition.Key, "!") {
-								return fmt.Errorf("'%s' strategy '%s' condition key '%s' cannot start with '!'", manifest, strategy, condition.Key)
-							}
 						}
 					}
 					if xpathConfig.ConditionOperator != nil {
