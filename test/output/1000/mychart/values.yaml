@@ -15,7 +15,7 @@ ports:
 resources: {}
 securityContext: {}
 tls:
-  disabled: false
+  enabled: true
 tolerations: {}
 webhook:
   disabled: false

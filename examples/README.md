@@ -252,6 +252,33 @@ We also introduce the `strategy` in the configuration file.
     {{- end }}
     ```
 
+    The `control-if` strategy also supports specifying one or more conditions:
+
+    ```yaml
+    spec.template.spec.containers[0].ports[2]:
+    - strategy: control-if
+      conditions:
+      - key: "!sharedValues.webhook.disabled"
+      - key: sharedValues.tls.enabled
+      conditionOperator: and
+    ```
+
+    A condition can be negated by prefixing the key with `!`. The `conditionOperator` can be `and` or `or`.</br>
+
+    This generates the following Helm template:
+
+    ```yaml
+    {{- if and (not .Values.webhook.disabled) .Values.tls.enabled }}
+    - containerPort: 9443
+      name: webhook-server
+      protocol: TCP
+    {{- end }}
+    ```
+
+    > __Note__: The following `condition` and `conditionValue` are deprecated in version `0.5.0`. Use `conditions` instead.
+
+    <details>
+
     The `control-if` strategy also supports specifying a condition:
 
     ```yaml
@@ -287,7 +314,9 @@ We also introduce the `strategy` in the configuration file.
     {{- end }}
     ```
 
-1. `control-if-yaml`
+    </details>
+
+2. `control-if-yaml`
 
     ```
     {{- if .Values.operator.initContainer.imagePullSecrets }}
@@ -316,7 +345,7 @@ We also introduce the `strategy` in the configuration file.
     {{- end }}
     ```
 
-1. `control-range`
+3. `control-range`
 
     ```
     imagePullSecrets:
@@ -325,7 +354,7 @@ We also introduce the `strategy` in the configuration file.
     {{- end }}
     ```
 
-1. `file-if`
+4. `file-if`
 
     Conditionally includes or omits an entire resource manifest.
 
@@ -352,7 +381,7 @@ We also introduce the `strategy` in the configuration file.
         key: sharedValues.promethues.enabled
     ```
 
-1. `inline-regex`
+5. `inline-regex`
 
     Allows insertion of a templated value as part of an overall string, such as the value for a pod's command line argument.
 
@@ -382,7 +411,7 @@ We also introduce the `strategy` in the configuration file.
     This is how to do it.
 
     1. Edit the kustohelmize configuration file.
-    1. Set up the deployment's configuration like this:
+    2. Set up the deployment's configuration like this:
 
         ```yaml
         fileConfig:
@@ -400,7 +429,7 @@ We also introduce the `strategy` in the configuration file.
               key: manager.probe.port
         ```
 
-    1. The emitted Helm template will be:
+    3. The emitted Helm template will be:
 
       ```yaml
           - args:
@@ -423,7 +452,7 @@ We also introduce the `strategy` in the configuration file.
 
     The match group in the regex `(\d+)` is templated with the `.Values` identified by `key`. Currently, only one replacement per list item is possible.
 
-1. `append-with`
+6. `append-with`
 
     Allows appending a list of values to an existing list in the Helm template.
 
