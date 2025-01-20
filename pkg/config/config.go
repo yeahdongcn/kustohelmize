@@ -42,23 +42,31 @@ const (
 	XPathStrategyAppendWith    XPathStrategy = "append-with"
 )
 
-type XPathConfig struct {
-	Strategy       XPathStrategy   `yaml:"strategy"`
-	Key            string          `yaml:"key"`
-	Value          interface{}     `yaml:"value,omitempty"`
-	DefaultValue   interface{}     `yaml:"defaultValue,omitempty"`
-	Regex          string          `yaml:"regex,omitempty"`
-	RegexCompiled  *regexp2.Regexp `yaml:"-"`
-	Condition      string          `yaml:"condition,omitempty"`
-	ConditionValue bool            `yaml:"conditionValue,omitempty" default:"false"`
+type Condition struct {
+	Key   string `yaml:"key,omitempty"`
+	Value bool   `yaml:"value,omitempty"`
 }
 
-func (x *XPathConfig) ValueRequiresQuote() bool {
-	if x.Value == nil {
+type XPathConfig struct {
+	Strategy          XPathStrategy   `yaml:"strategy"`
+	Key               string          `yaml:"key"`
+	Value             interface{}     `yaml:"value,omitempty"`
+	DefaultValue      interface{}     `yaml:"defaultValue,omitempty"`
+	Regex             string          `yaml:"regex,omitempty"`
+	RegexCompiled     *regexp2.Regexp `yaml:"-"`
+	Conditions        []Condition     `yaml:"conditions,omitempty"`
+	ConditionOperator *string         `yaml:"conditionOperator,omitempty"`
+	// Deprecated
+	Condition      string `yaml:"condition,omitempty"`
+	ConditionValue bool   `yaml:"conditionValue,omitempty"`
+}
+
+func (xc *XPathConfig) ValueRequiresQuote() bool {
+	if xc.Value == nil {
 		return false
 	}
 
-	switch value := x.Value.(type) {
+	switch value := xc.Value.(type) {
 	case bool, int, float64:
 		return true
 	case string:
@@ -206,8 +214,12 @@ func (cc *ChartConfig) Values() (string, error) {
 
 				kvs := []kvPair{{c.Key, c.Value}}
 				if c.Condition != "" {
-					condition := strings.TrimPrefix(c.Condition, "!")
-					kvs = append(kvs, kvPair{condition, c.ConditionValue})
+					conditionKey := strings.TrimPrefix(c.Condition, "!")
+					kvs = append(kvs, kvPair{conditionKey, c.ConditionValue})
+				}
+				for _, condition := range c.Conditions {
+					conditionKey := strings.TrimPrefix(condition.Key, "!")
+					kvs = append(kvs, kvPair{conditionKey, condition.Value})
 				}
 				for _, kv := range kvs {
 					substrings := strings.Split(kv.Key, XPathSeparator)
@@ -295,14 +307,40 @@ func (c *ChartConfig) formatKey(key, prefix string, keyType KeyType, strategy XP
 }
 
 func (c *ChartConfig) GetFormattedCondition(xc *XPathConfig, prefix string) (string, bool) {
-	not := strings.HasPrefix(xc.Condition, "!")
-	condition := strings.TrimPrefix(xc.Condition, "!")
-	key, keyType := c.determineKeyType(condition)
-	if key == "" {
-		return key, not
+	formatCondition := func(condition string) (string, bool) {
+		not := strings.HasPrefix(condition, "!")
+		conditionKey := strings.TrimPrefix(condition, "!")
+		key, keyType := c.determineKeyType(conditionKey)
+		if key == "" {
+			return "", not
+		}
+		return c.formatKey(key, prefix, keyType, xc.Strategy), not
 	}
-	key = c.formatKey(key, prefix, keyType, xc.Strategy)
-	return key, not
+
+	formatMultipleConditions := func(conditions []Condition) (string, bool) {
+		keys := make([]string, len(conditions))
+		for i, condition := range conditions {
+			key, not := formatCondition(condition.Key)
+			if key != "" {
+				if not {
+					key = fmt.Sprintf("(not %s)", key)
+				}
+				keys[i] = key
+			}
+		}
+
+		return fmt.Sprintf("%s %s", *xc.ConditionOperator, strings.Join(keys, " ")), false
+	}
+
+	if xc.Condition != "" {
+		return formatCondition(xc.Condition)
+	} else if len(xc.Conditions) > 0 {
+		if len(xc.Conditions) == 1 {
+			return formatCondition(xc.Conditions[0].Key)
+		}
+		return formatMultipleConditions(xc.Conditions)
+	}
+	return "", false
 }
 
 func (c *ChartConfig) GetFormattedKeyWithDefaultValue(xc *XPathConfig, prefix string) (string, KeyType) {
@@ -322,6 +360,10 @@ func (c *ChartConfig) Validate() error {
 	// - file-if can only be present at root level file configs
 	// - globalConfig cannot contain a root level entry
 	// - inline-regex must have regex property, and the regex must compile and contain exactly one capture group
+	// - control-if and control-if-yaml with multiple conditions:
+	//   - must have conditionOperator property
+	//   - conditionOperator must be 'and' or 'or'
+	// - other strategies cannot have condition or conditions property
 	if _, ok := c.GlobalConfig[XPathRoot]; ok {
 		return fmt.Errorf("cannot have root level config in GlobalConfig")
 	}
@@ -343,6 +385,21 @@ func (c *ChartConfig) Validate() error {
 						return fmt.Errorf("'%s' strategy '%s': regular expression '%s' must have exactly one replacement group", manifest, strategy, xpathConfig.Regex)
 					}
 					xpathConfigs[i].RegexCompiled = rx
+				} else if strategy == XPathStrategyControlIf || strategy == XPathStrategyControlIfYAML {
+					if len(xpathConfig.Conditions) > 1 {
+						if xpathConfig.ConditionOperator == nil {
+							return fmt.Errorf("'%s' strategy '%s' must have 'conditionOperator' property", manifest, strategy)
+						}
+					}
+					if xpathConfig.ConditionOperator != nil {
+						if *xpathConfig.ConditionOperator != "and" && *xpathConfig.ConditionOperator != "or" {
+							return fmt.Errorf("'%s' strategy '%s' conditionOperator must be 'and' or 'or'", manifest, strategy)
+						}
+					}
+				} else {
+					if xpathConfig.Condition != "" || len(xpathConfig.Conditions) > 0 {
+						return fmt.Errorf("'%s' strategy '%s' cannot have 'condition' or 'conditions' property", manifest, strategy)
+					}
 				}
 			}
 		}

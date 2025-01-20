@@ -31,9 +31,11 @@ spec:
             - containerPort: 443
               name: https
               protocol: TCP
+            {{- if and (not .Values.webhook.disabled) .Values.tls.enabled }}
             - containerPort: 9443
               name: webhook-server
               protocol: TCP
+            {{- end }}
             {{- with .Values.ports }}
             {{- toYaml . | nindent 12 }}
             {{- end }}

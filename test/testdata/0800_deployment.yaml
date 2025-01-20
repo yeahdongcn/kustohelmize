@@ -26,3 +26,6 @@ spec:
         - name: https
           containerPort: 443
           protocol: TCP
+        - containerPort: 9443
+          name: webhook-server
+          protocol: TCP

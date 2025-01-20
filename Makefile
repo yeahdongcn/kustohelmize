@@ -52,7 +52,7 @@ examples: build kubernetes-split-yaml ## Test the binary against the examples.
 	cd examples/memcached-operator; KUSTOHELMIZE=../../bin/kustohelmize make helm
 
 .PHONY: test
-test: go-test build kubernetes-split-yaml 0100 0200 0300 0400 0500 0600 0700 0800 0900 ## Test the binary.
+test: go-test build kubernetes-split-yaml 0100 0200 0300 0400 0500 0600 0700 0800 0900 1000 ## Test the binary.
 
 .PHONY: go-test
 go-test:
@@ -111,6 +111,12 @@ go-test:
 	$(KUSTOHELMIZE) create --from=test/testdata/0800_deployment.yaml test/output/0900/mychart
 	$(HELM) lint test/output/0900/mychart
 	$(HELM) install --dry-run --generate-name test/output/0900/mychart -n default
+
+.PHONY: 1000
+1000: build
+	$(KUSTOHELMIZE) create --from=test/testdata/0800_deployment.yaml test/output/1000/mychart
+	$(HELM) lint test/output/1000/mychart
+	$(HELM) install --dry-run --generate-name test/output/1000/mychart -n default
 
 ##@ Tools
 
